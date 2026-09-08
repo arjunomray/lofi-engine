@@ -26,8 +26,8 @@
   let inputElement = $state<HTMLInputElement | null>(null);
   let containerElement = $state<HTMLDivElement | null>(null);
 
-  function toggleDropdown(e: MouseEvent) {
-    e.stopPropagation();
+  function toggleDropdown(e?: MouseEvent) {
+    if (e) e.stopPropagation();
     isDropdownOpen = !isDropdownOpen;
     if (isDropdownOpen) {
       typedSeed = seed;
@@ -38,6 +38,14 @@
         }
       }, 50);
     }
+  }
+
+  export function toggleSeedMenu() {
+    toggleDropdown();
+  }
+
+  export function closeSeedMenu() {
+    isDropdownOpen = false;
   }
 
   function handleFormSubmit(e: SubmitEvent) {

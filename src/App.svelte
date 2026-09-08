@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { LoFiGenerator } from './generator/index.js';
   import type { GeneratedSong } from './generator/types.js';
   import { AudioEngine } from './audio/AudioEngine.js';
@@ -13,6 +13,7 @@
   import ControlsDock from './components/ControlsDock.svelte';
   import DSPPanel from './components/DSPPanel.svelte';
   import CrossfadeToast from './components/CrossfadeToast.svelte';
+  import InfoModal from './components/InfoModal.svelte';
 
   // State
   let seedInput = $state('rainy-tokyo');
@@ -20,20 +21,56 @@
   let currentSong = $state<GeneratedSong | null>(null);
   let isPlaying = $state(false);
   let showSettings = $state(false);
+  let showInfoModal = $state(false);
   let transitionNotice = $state('');
   let currentMode = $state<VisualizerMode>('car_backseat');
 
   // DSP Controls
   let params = $state<LoFiDSPParams>({ ...DEFAULT_DSP_PARAMS });
 
-  // Engine & Visualizer Component Ref
+  // Engine & Component Refs
   let engine = $state<AudioEngine | null>(null);
   let visualizerRef = $state<any>(null);
+  let topBarRef = $state<any>(null);
 
   function recordSeed(seed: string) {
     const clean = seed.trim();
     if (!clean) return;
     recentSeeds = [clean, ...recentSeeds.filter(s => s !== clean)].slice(0, 5);
+  }
+
+  function handleGlobalKeyDown(e: KeyboardEvent) {
+    // Ignore keyboard shortcuts when typing in an input, textarea, or contentEditable
+    const target = e.target as HTMLElement | null;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+      return;
+    }
+
+    const key = e.key.toLowerCase();
+
+    if (key === 'p') {
+      e.preventDefault();
+      togglePlay();
+    } else if (key === 'n') {
+      e.preventDefault();
+      rollNewSeed();
+    } else if (key === 'v') {
+      e.preventDefault();
+      handleModeCycle();
+    } else if (key === 's') {
+      e.preventDefault();
+      topBarRef?.toggleSeedMenu();
+    } else if (key === 'd') {
+      e.preventDefault();
+      showSettings = !showSettings;
+    } else if (key === 'i') {
+      e.preventDefault();
+      showInfoModal = !showInfoModal;
+    } else if (e.key === 'Escape') {
+      if (showInfoModal) showInfoModal = false;
+      if (showSettings) showSettings = false;
+      topBarRef?.closeSeedMenu();
+    }
   }
 
   onMount(() => {
@@ -50,7 +87,14 @@
       }, 3500);
     });
 
+    window.addEventListener('keydown', handleGlobalKeyDown);
     generateSong(seedInput);
+  });
+
+  onDestroy(() => {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+    }
   });
 
   function generateSong(seed: string) {
@@ -132,6 +176,7 @@
 
   <!-- 2. MINIMAL TOP HUD -->
   <TopBar 
+    bind:this={topBarRef}
     seed={seedInput}
     {isPlaying}
     currentMode={formatModeName(currentMode)}
@@ -164,6 +209,29 @@
       onNextBeat={rollNewSeed}
     />
   </footer>
+
+  <!-- 5. BOTTOM-LEFT INFO & SHORTCUTS BUTTON -->
+  <aside class="info-corner">
+    <button 
+      onclick={() => showInfoModal = !showInfoModal}
+      class="btn-glass btn-info {showInfoModal ? 'active' : ''}"
+      title="Shortcuts & System Info (Press I)"
+      aria-label="Shortcuts & Info"
+    >
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="16" x2="12" y2="12"/>
+        <line x1="12" y1="8" x2="12.01" y2="8"/>
+      </svg>
+      <span class="font-mono">INFO</span>
+    </button>
+  </aside>
+
+  <!-- 6. INFO & SHORTCUTS MODAL -->
+  <InfoModal 
+    show={showInfoModal} 
+    onClose={() => showInfoModal = false} 
+  />
 </div>
 
 <style>
@@ -191,5 +259,31 @@
     z-index: 20;
     pointer-events: none;
     padding: 0 16px;
+  }
+
+  .info-corner {
+    position: absolute;
+    bottom: 28px;
+    left: 28px;
+    z-index: 25;
+    pointer-events: auto;
+  }
+
+  .btn-info {
+    padding: 8px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: #a79bbd;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-info:hover, .btn-info.active {
+    color: #00f0ff;
+    border-color: rgba(0, 240, 255, 0.45);
+    box-shadow: 0 0 14px rgba(0, 240, 255, 0.35);
   }
 </style>

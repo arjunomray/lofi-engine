@@ -30,11 +30,11 @@ export class RhodesSynth {
     modulator.type = 'sine';
     modulator.frequency.setValueAtTime(freq * 1.0, time); // 1:1 harmonic ratio for bell chime
 
-    // Modulator Index / Gain Envelope
+    // Modulator Index / Gain Envelope (softened to remove metallic pings)
     const modGain = this.ctx.createGain();
-    const modIndex = freq * (1.2 + vel * 1.5);
+    const modIndex = freq * (0.2 + vel * 0.35);
     modGain.gain.setValueAtTime(modIndex, time);
-    modGain.gain.exponentialRampToValueAtTime(0.01, time + Math.min(0.4, duration * 0.5));
+    modGain.gain.exponentialRampToValueAtTime(0.001, time + Math.min(0.2, duration * 0.3));
 
     // Connect Modulator -> Carrier frequency
     modulator.connect(modGain);
@@ -43,8 +43,8 @@ export class RhodesSynth {
     // 3. Amplitude Envelope (ADSR)
     const ampGain = this.ctx.createGain();
     ampGain.gain.setValueAtTime(0.0001, time);
-    // Soft attack (8ms)
-    ampGain.gain.linearRampToValueAtTime(vel * 0.45, time + 0.008);
+    // Soft attack (14ms)
+    ampGain.gain.linearRampToValueAtTime(vel * 0.42, time + 0.014);
     // Gentle decay to warm sustain
     const sustainLevel = vel * 0.28;
     ampGain.gain.exponentialRampToValueAtTime(sustainLevel, time + Math.min(0.3, duration * 0.4));
@@ -52,10 +52,10 @@ export class RhodesSynth {
     ampGain.gain.setValueAtTime(sustainLevel, time + duration);
     ampGain.gain.exponentialRampToValueAtTime(0.0001, time + duration + 0.15);
 
-    // 4. Warm Cabinet Filter
+    // 4. Warm Cabinet Filter (Low-pass @ 1900 Hz max for cozy vintage tone)
     const cabinetFilter = this.ctx.createBiquadFilter();
     cabinetFilter.type = 'lowpass';
-    cabinetFilter.frequency.setValueAtTime(Math.min(3200, freq * 3.5), time);
+    cabinetFilter.frequency.setValueAtTime(Math.min(1900, freq * 2.6), time);
 
     carrier.connect(ampGain);
     ampGain.connect(cabinetFilter);

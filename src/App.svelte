@@ -119,50 +119,48 @@
   function formatModeName(m: VisualizerMode): string {
     switch (m) {
       case 'bars_and_waves': return 'Bars & Waves';
-      case 'neon_scope': return 'Neon Oscilloscope';
+      case 'neon_scope': return 'Neon Scope';
       case 'radial_alchemy': return 'Radial Alchemy';
     }
   }
 </script>
 
-<!-- Fullscreen Container -->
-<div class="relative w-screen h-screen overflow-hidden bg-[#07090d] select-none font-sans text-zinc-100">
+<div class="player-container">
   
-  <!-- SCREEN-WIDE WINDOWS MEDIA PLAYER CANVAS -->
+  <!-- SCREEN-WIDE CANVAS VISUALIZER -->
   <canvas 
     bind:this={canvasElement} 
-    class="absolute inset-0 w-full h-full block cursor-pointer"
+    class="fullscreen-canvas"
     onclick={cycleVisualizerMode}
-    title="Click anywhere to cycle visualizer mode"
+    title="Click to cycle visualizer mode"
   ></canvas>
 
-  <!-- VINTAGE CRT SCANLINE OVERLAY -->
-  <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] z-10 opacity-35"></div>
+  <!-- SUBTLE VINTAGE CRT SCANLINE -->
+  <div class="crt-overlay"></div>
 
-  <!-- MINIMAL TOP HUD BAR -->
-  <header class="absolute top-0 inset-x-0 p-4 md:p-6 z-20 flex items-center justify-between pointer-events-none">
-    
+  <!-- TOP HEADER HUD -->
+  <header class="top-hud">
     <!-- Seed Name Button (Starts loop, rolls new seed) -->
-    <div class="pointer-events-auto flex items-center gap-2 bg-zinc-900/80 hover:bg-zinc-800/90 border border-zinc-700/60 rounded-full px-4 py-2 backdrop-blur-md transition-all shadow-xl">
-      <span class="w-2 h-2 rounded-full {isPlaying ? 'bg-amber-400 animate-pulse' : 'bg-zinc-500'}"></span>
-      <span class="text-xs font-mono text-zinc-400">SEED:</span>
+    <div class="glass-pill seed-pill">
+      <span class="status-dot {isPlaying ? 'active' : ''}"></span>
+      <span class="seed-label font-mono">SEED:</span>
       <button 
         onclick={rollNewSeed}
-        class="text-xs font-mono font-bold text-amber-300 hover:text-amber-200 transition-colors cursor-pointer flex items-center gap-1.5"
-        title="Click to roll a new seed and start loop"
+        class="seed-btn font-mono"
+        title="Click to roll new seed and start loop"
       >
         <span>{seedInput}</span>
-        <span class="text-[10px] text-zinc-400">🎲</span>
+        <span class="dice-icon">🎲</span>
       </button>
     </div>
 
     <!-- Visualizer Mode Switcher -->
     <button 
       onclick={cycleVisualizerMode}
-      class="pointer-events-auto px-3.5 py-2 bg-zinc-900/80 hover:bg-zinc-800/90 border border-zinc-700/60 rounded-full text-xs font-mono text-zinc-300 backdrop-blur-md transition-all shadow-xl flex items-center gap-2 cursor-pointer"
-      title="Switch Visualizer View"
+      class="btn-glass font-mono"
+      title="Cycle visualizer mode"
     >
-      <svg class="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
         <polygon points="12 2 2 7 12 12 22 7 12 2"/>
         <polyline points="2 17 12 22 22 17"/>
         <polyline points="2 12 12 17 22 12"/>
@@ -173,34 +171,29 @@
 
   <!-- CROSSFADE TOAST NOTIFICATION -->
   {#if transitionNotice}
-    <div class="absolute top-20 left-1/2 -translate-x-1/2 z-30 px-5 py-2.5 bg-amber-500/20 border border-amber-500/40 text-amber-300 rounded-full text-xs font-mono backdrop-blur-lg flex items-center gap-2 shadow-2xl animate-fade-in pointer-events-none">
-      <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+    <div class="crossfade-toast toast-anim font-mono">
+      <span class="pulse-dot"></span>
       <span>{transitionNotice}</span>
     </div>
   {/if}
 
-  <!-- FLOATING MINIMAL PLAYER DECK (BOTTOM) -->
-  <footer class="absolute bottom-6 inset-x-0 z-20 flex flex-col items-center gap-4 px-4 pointer-events-none">
+  <!-- FLOATING BOTTOM CONTROLS DOCK -->
+  <footer class="bottom-hud">
     
-    <!-- DSP KNOBS PANEL (Expandable / Sleek) -->
+    <!-- EXPANDABLE DSP KNOBS PANEL -->
     {#if showSettings}
-      <div class="pointer-events-auto w-full max-w-xl bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-5 backdrop-blur-xl shadow-2xl font-mono text-xs animate-scale-up">
-        <div class="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
-          <span class="text-zinc-400 uppercase tracking-wider text-[11px] font-semibold">Lo-Fi Sound Design (DSP)</span>
-          <button 
-            onclick={() => showSettings = false} 
-            class="text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer text-sm"
-          >
-            ✕
-          </button>
+      <div class="glass-panel dsp-panel panel-anim font-mono">
+        <div class="dsp-header">
+          <span>LO-FI SOUND DESIGN</span>
+          <button onclick={() => showSettings = false} class="close-btn">✕</button>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <!-- Warmth (Filter Cutoff) -->
-          <div class="flex flex-col gap-1.5">
-            <div class="flex justify-between text-[10px]">
-              <span class="text-zinc-400">WARMTH</span>
-              <span class="text-amber-400">{Math.round(params.filterCutoff / 1000)}k</span>
+        <div class="dsp-grid">
+          <!-- Warmth -->
+          <div class="dsp-item">
+            <div class="dsp-label-row">
+              <span class="dsp-name">WARMTH</span>
+              <span class="dsp-val">{Math.round(params.filterCutoff / 100) / 10}k</span>
             </div>
             <input 
               type="range" 
@@ -209,15 +202,14 @@
               step="100"
               value={params.filterCutoff} 
               oninput={(e) => handleParamChange('filterCutoff', Number((e.target as HTMLInputElement).value))}
-              class="w-full accent-amber-400 cursor-pointer h-1.5 bg-zinc-800 rounded-lg"
             />
           </div>
 
           <!-- Tape Wobble -->
-          <div class="flex flex-col gap-1.5">
-            <div class="flex justify-between text-[10px]">
-              <span class="text-zinc-400">WOBBLE</span>
-              <span class="text-amber-400">{Math.round(params.tapeWobbleDepth * 100)}%</span>
+          <div class="dsp-item">
+            <div class="dsp-label-row">
+              <span class="dsp-name">WOBBLE</span>
+              <span class="dsp-val">{Math.round(params.tapeWobbleDepth * 100)}%</span>
             </div>
             <input 
               type="range" 
@@ -226,15 +218,14 @@
               step="0.05"
               value={params.tapeWobbleDepth} 
               oninput={(e) => handleParamChange('tapeWobbleDepth', Number((e.target as HTMLInputElement).value))}
-              class="w-full accent-amber-400 cursor-pointer h-1.5 bg-zinc-800 rounded-lg"
             />
           </div>
 
           <!-- Vinyl Crackle -->
-          <div class="flex flex-col gap-1.5">
-            <div class="flex justify-between text-[10px]">
-              <span class="text-zinc-400">VINYL</span>
-              <span class="text-amber-400">{Math.round(params.vinylVolume * 100)}%</span>
+          <div class="dsp-item">
+            <div class="dsp-label-row">
+              <span class="dsp-name">VINYL</span>
+              <span class="dsp-val">{Math.round(params.vinylVolume * 100)}%</span>
             </div>
             <input 
               type="range" 
@@ -243,15 +234,14 @@
               step="0.05"
               value={params.vinylVolume} 
               oninput={(e) => handleParamChange('vinylVolume', Number((e.target as HTMLInputElement).value))}
-              class="w-full accent-amber-400 cursor-pointer h-1.5 bg-zinc-800 rounded-lg"
             />
           </div>
 
           <!-- Sidechain Pump -->
-          <div class="flex flex-col gap-1.5">
-            <div class="flex justify-between text-[10px]">
-              <span class="text-zinc-400">PUMP</span>
-              <span class="text-amber-400">{Math.round(params.sidechainStrength * 100)}%</span>
+          <div class="dsp-item">
+            <div class="dsp-label-row">
+              <span class="dsp-name">PUMP</span>
+              <span class="dsp-val">{Math.round(params.sidechainStrength * 100)}%</span>
             </div>
             <input 
               type="range" 
@@ -260,7 +250,6 @@
               step="0.05"
               value={params.sidechainStrength} 
               oninput={(e) => handleParamChange('sidechainStrength', Number((e.target as HTMLInputElement).value))}
-              class="w-full accent-amber-400 cursor-pointer h-1.5 bg-zinc-800 rounded-lg"
             />
           </div>
         </div>
@@ -268,15 +257,15 @@
     {/if}
 
     <!-- CENTRAL CONTROLS PILL -->
-    <div class="pointer-events-auto flex items-center gap-3 bg-zinc-950/80 border border-zinc-800/80 rounded-full px-5 py-2.5 backdrop-blur-xl shadow-2xl">
+    <div class="glass-pill control-pill">
       
-      <!-- Quick DSP Knobs Toggle -->
+      <!-- DSP Knobs Toggle Button -->
       <button 
         onclick={() => showSettings = !showSettings}
-        class="p-2.5 rounded-full {showSettings ? 'bg-amber-500/20 text-amber-300' : 'text-zinc-400 hover:text-zinc-200'} transition-colors cursor-pointer"
-        title="Toggle Sound Design (DSP Knobs)"
+        class="btn-icon {showSettings ? 'active' : ''}"
+        title="Toggle DSP sound knobs"
       >
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="4" y1="21" x2="4" y2="14"></line>
           <line x1="4" y1="10" x2="4" y2="3"></line>
           <line x1="12" y1="21" x2="12" y2="12"></line>
@@ -292,24 +281,24 @@
       <!-- MAIN PLAY / PAUSE BUTTON -->
       <button 
         onclick={togglePlay}
-        class="px-7 py-3 rounded-full font-bold flex items-center gap-2 transition-all cursor-pointer shadow-lg {isPlaying ? 'bg-amber-400 hover:bg-amber-300 text-zinc-950 shadow-amber-500/25' : 'bg-zinc-100 hover:bg-white text-zinc-950 shadow-white/10'}"
+        class="btn-play {isPlaying ? 'playing' : ''}"
       >
         {#if isPlaying}
-          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
-          <span>Pause</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
+          <span>PAUSE</span>
         {:else}
-          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-          <span>Play</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <span>PLAY LO-FI</span>
         {/if}
       </button>
 
-      <!-- Roll Next Seed Button -->
+      <!-- Next Beat / Roll Button -->
       <button 
         onclick={rollNewSeed}
-        class="p-2.5 text-zinc-400 hover:text-amber-300 transition-colors cursor-pointer"
+        class="btn-icon"
         title="Next Beat (Roll Seed)"
       >
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="5 4 15 12 5 20"></polyline>
           <line x1="19" y1="5" x2="19" y2="19"></line>
         </svg>
@@ -320,11 +309,217 @@
 </div>
 
 <style>
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translate(-50%, -10px); }
-    to { opacity: 1; transform: translate(-50%, 0); }
+  .player-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background-color: #06070a;
   }
-  .animate-fade-in {
-    animation: fadeIn 0.3s ease-out forwards;
+
+  .fullscreen-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: pointer;
+  }
+
+  .crt-overlay {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.22) 50%);
+    background-size: 100% 4px;
+    z-index: 5;
+    opacity: 0.3;
+  }
+
+  .top-hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  .top-hud > * {
+    pointer-events: auto;
+  }
+
+  .seed-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 9999px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #52525b;
+    transition: background 0.3s;
+  }
+
+  .status-dot.active {
+    background: #10b981;
+    box-shadow: 0 0 10px #10b981;
+  }
+
+  .seed-label {
+    font-size: 11px;
+    color: #71717a;
+    letter-spacing: 0.05em;
+  }
+
+  .seed-btn {
+    background: transparent;
+    border: none;
+    color: #f59e0b;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  .seed-btn:hover {
+    color: #fbbf24;
+  }
+
+  .dice-icon {
+    font-size: 12px;
+    opacity: 0.8;
+  }
+
+  .crossfade-toast {
+    position: absolute;
+    top: 85px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+    padding: 10px 20px;
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    color: #fcd34d;
+    border-radius: 9999px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+  }
+
+  .pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f59e0b;
+    box-shadow: 0 0 8px #f59e0b;
+  }
+
+  .bottom-hud {
+    position: absolute;
+    bottom: 28px;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    z-index: 20;
+    pointer-events: none;
+    padding: 0 16px;
+  }
+
+  .bottom-hud > * {
+    pointer-events: auto;
+  }
+
+  .control-pill {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 14px;
+    border-radius: 9999px;
+  }
+
+  .dsp-panel {
+    width: 100%;
+    max-width: 520px;
+    padding: 20px 24px;
+    border-radius: 20px;
+    font-size: 12px;
+  }
+
+  .dsp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: #a1a1aa;
+    font-weight: 600;
+  }
+
+  .close-btn {
+    background: transparent;
+    border: none;
+    color: #71717a;
+    font-size: 14px;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+
+  .close-btn:hover {
+    color: #e4e4e7;
+  }
+
+  .dsp-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  @media (min-width: 500px) {
+    .dsp-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  .dsp-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .dsp-label-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+  }
+
+  .dsp-name {
+    color: #a1a1aa;
+  }
+
+  .dsp-val {
+    color: #f59e0b;
+    font-weight: 600;
   }
 </style>

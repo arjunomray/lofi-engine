@@ -282,6 +282,9 @@ export class AudioEngine {
     if (!this.autoEvolve) return;
 
     if (completedLoops >= this.loopsBeforeEvolve) {
+      // 50/50 chance for the next song to play 1 or 2 times before evolving
+      this.loopsBeforeEvolve = Math.random() < 0.5 ? 1 : 2;
+
       const nextSeed = this.generateNextSeed();
       const nextSong = LoFiGenerator.generate({ seed: nextSeed });
       this.currentSong = nextSong;

@@ -5,84 +5,93 @@
   import { AudioEngine } from './audio/AudioEngine.js';
   import { DEFAULT_DSP_PARAMS } from './audio/types.js';
   import type { LoFiDSPParams } from './audio/types.js';
+  import { WMPVisualizer } from './visualizer/wmpRenderer.js';
+  import type { VisualizerMode } from './visualizer/wmpRenderer.js';
 
   // State
   let seedInput = $state('rainy-tokyo');
   let currentSong = $state<GeneratedSong | null>(null);
   let isPlaying = $state(false);
-
-  // Loop & Auto-Evolve Mode
-  let autoEvolve = $state(true);
-  let loopsBeforeEvolve = $state(2); // Evolve after 1 or 2 loops
-  let transitionToast = $state('');
-  let isTransitioning = $state(false);
+  let showSettings = $state(false);
+  let transitionNotice = $state('');
 
   // DSP Controls
   let params = $state<LoFiDSPParams>({ ...DEFAULT_DSP_PARAMS });
 
-  // Audio Engine Instance
+  // Engine & Visualizer
+  let canvasElement: HTMLCanvasElement;
+  let visualizer: WMPVisualizer;
   let engine: AudioEngine;
   let animFrameId: number;
-
-  // Real-time Visual Energy
-  let bassEnergy = $state(0);
-  let midEnergy = $state(0);
-  let highEnergy = $state(0);
+  let currentMode = $state<VisualizerMode>('bars_and_waves');
 
   onMount(() => {
+    // 1. Initialize Canvas & Visualizer
+    visualizer = new WMPVisualizer(canvasElement);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
+    // 2. Initialize Audio Engine with Auto-Evolve (50/50 chance for 1 or 2 plays)
     engine = new AudioEngine();
-    
-    // Configure Auto-Evolve callback
-    engine.setAutoEvolve(autoEvolve, loopsBeforeEvolve, (newSong) => {
+    engine.setAutoEvolve(true, 2, (newSong) => {
       currentSong = newSong;
       seedInput = String(newSong.seed);
-      isTransitioning = true;
-      transitionToast = `🎧 Crossfaded to new seed: "${newSong.seed}"`;
+      transitionNotice = `Crossfaded to "${newSong.seed}"`;
       setTimeout(() => {
-        isTransitioning = false;
-      }, 2500);
-      setTimeout(() => {
-        transitionToast = '';
-      }, 4500);
+        transitionNotice = '';
+      }, 3500);
     });
 
-    generateNewSong();
+    generateSong(seedInput);
 
-    // 60 FPS Visual Meter Loop
-    function updateVisuals() {
-      if (isPlaying && engine) {
+    // 3. 60 FPS Render Loop
+    function loop() {
+      if (visualizer && engine) {
         const visualData = engine.getVisualData();
-        bassEnergy = visualData.bass;
-        midEnergy = visualData.mids;
-        highEnergy = visualData.highs;
-      } else {
-        bassEnergy *= 0.9;
-        midEnergy *= 0.9;
-        highEnergy *= 0.9;
+        visualizer.render(visualData, isPlaying);
       }
-      animFrameId = requestAnimationFrame(updateVisuals);
+      animFrameId = requestAnimationFrame(loop);
     }
-    animFrameId = requestAnimationFrame(updateVisuals);
+    animFrameId = requestAnimationFrame(loop);
   });
 
   onDestroy(() => {
     if (engine) engine.stop();
     if (animFrameId) cancelAnimationFrame(animFrameId);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', handleResize);
+    }
   });
 
-  function generateNewSong() {
-    currentSong = LoFiGenerator.generate({
-      seed: seedInput.trim() || 'lofi-vibe'
-    });
+  function handleResize() {
+    if (!canvasElement) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvasElement.width = window.innerWidth * dpr;
+    canvasElement.height = window.innerHeight * dpr;
+  }
+
+  function generateSong(seed: string) {
+    const cleanSeed = seed.trim() || 'lofi-vibe';
+    seedInput = cleanSeed;
+    currentSong = LoFiGenerator.generate({ seed: cleanSeed });
     if (isPlaying && engine) {
       engine.play(currentSong);
     }
   }
 
-  function randomizeSeed() {
-    const moods = ['midnight-drive', 'rainy-kyoto', 'coffee-study', 'cloudy-afternoon', 'dusty-vinyl', 'cassette-42', 'autumn-leaves', 'nostalgia'];
-    seedInput = `${moods[Math.floor(Math.random() * moods.length)]}-${Math.floor(Math.random() * 999)}`;
-    generateNewSong();
+  function rollNewSeed() {
+    const moods = [
+      'rainy-tokyo', 'midnight-chill', 'coffee-study', 'cloudy-afternoon',
+      'dusty-vinyl', 'cassette-rewind', 'autumn-leaves', 'sunset-drive',
+      'neon-shinjuku', 'sleeping-cat', 'warm-breeze', 'lofi-cafe'
+    ];
+    const mood = moods[Math.floor(Math.random() * moods.length)];
+    const num = Math.floor(Math.random() * 900) + 100;
+    const newSeed = `${mood}-${num}`;
+    generateSong(newSeed);
+    if (!isPlaying) {
+      togglePlay();
+    }
   }
 
   async function togglePlay() {
@@ -97,270 +106,225 @@
     }
   }
 
-  function toggleAutoEvolve() {
-    autoEvolve = !autoEvolve;
-    if (engine) {
-      engine.setAutoEvolve(autoEvolve, loopsBeforeEvolve);
-    }
-  }
-
-  function setLoopCycle(count: number) {
-    loopsBeforeEvolve = count;
-    if (engine) {
-      engine.setAutoEvolve(autoEvolve, loopsBeforeEvolve);
-    }
+  function cycleVisualizerMode() {
+    if (!visualizer) return;
+    currentMode = visualizer.cycleMode();
   }
 
   function handleParamChange(key: keyof LoFiDSPParams, value: number) {
     params[key] = value;
     engine.updateParams({ [key]: value });
   }
+
+  function formatModeName(m: VisualizerMode): string {
+    switch (m) {
+      case 'bars_and_waves': return 'Bars & Waves';
+      case 'neon_scope': return 'Neon Oscilloscope';
+      case 'radial_alchemy': return 'Radial Alchemy';
+    }
+  }
 </script>
 
-<main class="min-h-screen bg-[#0d0f12] text-zinc-100 flex flex-col items-center justify-center p-4 md:p-8 font-sans selection:bg-amber-500/20">
-  <!-- Container Card -->
-  <div class="w-full max-w-2xl bg-zinc-900/90 border border-zinc-800/80 rounded-2xl p-6 md:p-8 shadow-2xl backdrop-blur-md relative overflow-hidden">
+<!-- Fullscreen Container -->
+<div class="relative w-screen h-screen overflow-hidden bg-[#07090d] select-none font-sans text-zinc-100">
+  
+  <!-- SCREEN-WIDE WINDOWS MEDIA PLAYER CANVAS -->
+  <canvas 
+    bind:this={canvasElement} 
+    class="absolute inset-0 w-full h-full block cursor-pointer"
+    onclick={cycleVisualizerMode}
+    title="Click anywhere to cycle visualizer mode"
+  ></canvas>
+
+  <!-- VINTAGE CRT SCANLINE OVERLAY -->
+  <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] z-10 opacity-35"></div>
+
+  <!-- MINIMAL TOP HUD BAR -->
+  <header class="absolute top-0 inset-x-0 p-4 md:p-6 z-20 flex items-center justify-between pointer-events-none">
     
-    <!-- Crossfade Glow Indicator Banner -->
-    {#if transitionToast}
-      <div class="mb-4 px-4 py-2 bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded-xl text-xs font-mono flex items-center justify-between animate-fade-in">
-        <span class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-          {transitionToast}
-        </span>
-        <span class="text-[10px] text-amber-400/80 uppercase tracking-widest font-semibold">Crossfading</span>
-      </div>
-    {/if}
+    <!-- Seed Name Button (Starts loop, rolls new seed) -->
+    <div class="pointer-events-auto flex items-center gap-2 bg-zinc-900/80 hover:bg-zinc-800/90 border border-zinc-700/60 rounded-full px-4 py-2 backdrop-blur-md transition-all shadow-xl">
+      <span class="w-2 h-2 rounded-full {isPlaying ? 'bg-amber-400 animate-pulse' : 'bg-zinc-500'}"></span>
+      <span class="text-xs font-mono text-zinc-400">SEED:</span>
+      <button 
+        onclick={rollNewSeed}
+        class="text-xs font-mono font-bold text-amber-300 hover:text-amber-200 transition-colors cursor-pointer flex items-center gap-1.5"
+        title="Click to roll a new seed and start loop"
+      >
+        <span>{seedInput}</span>
+        <span class="text-[10px] text-zinc-400">🎲</span>
+      </button>
+    </div>
 
-    <!-- Header -->
-    <header class="flex items-center justify-between border-b border-zinc-800 pb-5 mb-6">
-      <div>
-        <div class="flex items-center gap-2">
-          <span class="inline-block w-2.5 h-2.5 rounded-full {isPlaying ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-600'}"></span>
-          <h1 class="text-xl md:text-2xl font-bold tracking-tight text-zinc-100 font-mono">Lo-Fi Web Audio Engine</h1>
+    <!-- Visualizer Mode Switcher -->
+    <button 
+      onclick={cycleVisualizerMode}
+      class="pointer-events-auto px-3.5 py-2 bg-zinc-900/80 hover:bg-zinc-800/90 border border-zinc-700/60 rounded-full text-xs font-mono text-zinc-300 backdrop-blur-md transition-all shadow-xl flex items-center gap-2 cursor-pointer"
+      title="Switch Visualizer View"
+    >
+      <svg class="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+        <polyline points="2 17 12 22 22 17"/>
+        <polyline points="2 12 12 17 22 12"/>
+      </svg>
+      <span>{formatModeName(currentMode)}</span>
+    </button>
+  </header>
+
+  <!-- CROSSFADE TOAST NOTIFICATION -->
+  {#if transitionNotice}
+    <div class="absolute top-20 left-1/2 -translate-x-1/2 z-30 px-5 py-2.5 bg-amber-500/20 border border-amber-500/40 text-amber-300 rounded-full text-xs font-mono backdrop-blur-lg flex items-center gap-2 shadow-2xl animate-fade-in pointer-events-none">
+      <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+      <span>{transitionNotice}</span>
+    </div>
+  {/if}
+
+  <!-- FLOATING MINIMAL PLAYER DECK (BOTTOM) -->
+  <footer class="absolute bottom-6 inset-x-0 z-20 flex flex-col items-center gap-4 px-4 pointer-events-none">
+    
+    <!-- DSP KNOBS PANEL (Expandable / Sleek) -->
+    {#if showSettings}
+      <div class="pointer-events-auto w-full max-w-xl bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-5 backdrop-blur-xl shadow-2xl font-mono text-xs animate-scale-up">
+        <div class="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
+          <span class="text-zinc-400 uppercase tracking-wider text-[11px] font-semibold">Lo-Fi Sound Design (DSP)</span>
+          <button 
+            onclick={() => showSettings = false} 
+            class="text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer text-sm"
+          >
+            ✕
+          </button>
         </div>
-        <p class="text-xs md:text-sm text-zinc-400 mt-1">Real-time Web Audio Synthesizer & Auto-Evolve Loop Mode</p>
-      </div>
-      <div class="px-3 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-mono rounded-full">
-        100% Client-Side
-      </div>
-    </header>
 
-    <!-- Auto-Evolve Loop Mode Banner / Controls -->
-    <section class="mb-6 p-3.5 bg-zinc-950/70 border border-zinc-800/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <button 
-          onclick={toggleAutoEvolve}
-          class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none {autoEvolve ? 'bg-amber-500' : 'bg-zinc-700'}"
-          role="switch"
-          aria-checked={autoEvolve}
-          title="Toggle Auto-Evolve Loop Mode"
-        >
-          <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-zinc-950 shadow ring-0 transition duration-200 ease-in-out {autoEvolve ? 'translate-x-5' : 'translate-x-0'}"></span>
-        </button>
-        <div>
-          <div class="text-xs font-mono font-semibold text-zinc-200 flex items-center gap-1.5">
-            <span>Infinite Radio (Auto-Evolve)</span>
-            {#if autoEvolve}
-              <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-            {/if}
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <!-- Warmth (Filter Cutoff) -->
+          <div class="flex flex-col gap-1.5">
+            <div class="flex justify-between text-[10px]">
+              <span class="text-zinc-400">WARMTH</span>
+              <span class="text-amber-400">{Math.round(params.filterCutoff / 1000)}k</span>
+            </div>
+            <input 
+              type="range" 
+              min="800" 
+              max="9000" 
+              step="100"
+              value={params.filterCutoff} 
+              oninput={(e) => handleParamChange('filterCutoff', Number((e.target as HTMLInputElement).value))}
+              class="w-full accent-amber-400 cursor-pointer h-1.5 bg-zinc-800 rounded-lg"
+            />
           </div>
-          <p class="text-[10px] text-zinc-400">Plays seed 1-2 times, then crossfades to a new beat</p>
+
+          <!-- Tape Wobble -->
+          <div class="flex flex-col gap-1.5">
+            <div class="flex justify-between text-[10px]">
+              <span class="text-zinc-400">WOBBLE</span>
+              <span class="text-amber-400">{Math.round(params.tapeWobbleDepth * 100)}%</span>
+            </div>
+            <input 
+              type="range" 
+              min="0.0" 
+              max="1.0" 
+              step="0.05"
+              value={params.tapeWobbleDepth} 
+              oninput={(e) => handleParamChange('tapeWobbleDepth', Number((e.target as HTMLInputElement).value))}
+              class="w-full accent-amber-400 cursor-pointer h-1.5 bg-zinc-800 rounded-lg"
+            />
+          </div>
+
+          <!-- Vinyl Crackle -->
+          <div class="flex flex-col gap-1.5">
+            <div class="flex justify-between text-[10px]">
+              <span class="text-zinc-400">VINYL</span>
+              <span class="text-amber-400">{Math.round(params.vinylVolume * 100)}%</span>
+            </div>
+            <input 
+              type="range" 
+              min="0.0" 
+              max="0.8" 
+              step="0.05"
+              value={params.vinylVolume} 
+              oninput={(e) => handleParamChange('vinylVolume', Number((e.target as HTMLInputElement).value))}
+              class="w-full accent-amber-400 cursor-pointer h-1.5 bg-zinc-800 rounded-lg"
+            />
+          </div>
+
+          <!-- Sidechain Pump -->
+          <div class="flex flex-col gap-1.5">
+            <div class="flex justify-between text-[10px]">
+              <span class="text-zinc-400">PUMP</span>
+              <span class="text-amber-400">{Math.round(params.sidechainStrength * 100)}%</span>
+            </div>
+            <input 
+              type="range" 
+              min="0.0" 
+              max="1.0" 
+              step="0.05"
+              value={params.sidechainStrength} 
+              oninput={(e) => handleParamChange('sidechainStrength', Number((e.target as HTMLInputElement).value))}
+              class="w-full accent-amber-400 cursor-pointer h-1.5 bg-zinc-800 rounded-lg"
+            />
+          </div>
         </div>
       </div>
-
-      <!-- Loop Duration Selector -->
-      {#if autoEvolve}
-        <div class="flex items-center gap-1.5 bg-zinc-900 border border-zinc-700/60 rounded-lg p-1 self-start sm:self-auto text-[11px] font-mono">
-          <span class="text-zinc-400 px-1.5 text-[10px]">Change every:</span>
-          <button 
-            onclick={() => setLoopCycle(1)}
-            class="px-2 py-0.5 rounded cursor-pointer transition-colors {loopsBeforeEvolve === 1 ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30' : 'text-zinc-400 hover:text-zinc-200'}"
-          >
-            1 loop (~12s)
-          </button>
-          <button 
-            onclick={() => setLoopCycle(2)}
-            class="px-2 py-0.5 rounded cursor-pointer transition-colors {loopsBeforeEvolve === 2 ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30' : 'text-zinc-400 hover:text-zinc-200'}"
-          >
-            2 loops (~25s)
-          </button>
-        </div>
-      {/if}
-    </section>
-
-    <!-- Seed & Generation Control -->
-    <section class="mb-6">
-      <div class="flex items-center justify-between mb-2">
-        <label for="seed-input" class="text-xs font-mono uppercase tracking-wider text-zinc-400">Active Seed (DNA)</label>
-        {#if autoEvolve}
-          <span class="text-[10px] font-mono text-amber-400/90 animate-pulse">Auto-updating on loop cycle</span>
-        {/if}
-      </div>
-      <div class="flex gap-2">
-        <input 
-          id="seed-input"
-          type="text" 
-          bind:value={seedInput}
-          placeholder="Enter seed (e.g. rainy-tokyo, 42)"
-          class="flex-1 bg-zinc-950/80 border border-zinc-700/60 rounded-xl px-4 py-2.5 text-sm font-mono text-amber-200 focus:outline-none focus:border-amber-400/80 transition-colors {isTransitioning ? 'border-amber-400 ring-2 ring-amber-400/20' : ''}"
-          onkeydown={(e) => e.key === 'Enter' && generateNewSong()}
-        />
-        <button 
-          onclick={generateNewSong}
-          class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-sm font-medium transition-colors cursor-pointer"
-          title="Regenerate with current seed"
-        >
-          Apply
-        </button>
-        <button 
-          onclick={randomizeSeed}
-          class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-amber-300 rounded-xl text-sm font-medium transition-colors cursor-pointer"
-          title="Pick random seed"
-        >
-          🎲 Roll
-        </button>
-      </div>
-    </section>
-
-    <!-- Metadata Display -->
-    {#if currentSong}
-      <section class="bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-4 mb-6 font-mono text-xs space-y-1.5 transition-all {isTransitioning ? 'border-amber-500/50 shadow-md shadow-amber-500/10' : ''}">
-        <div class="flex justify-between">
-          <span class="text-zinc-500">Progression:</span>
-          <span class="text-amber-300 font-semibold truncate max-w-[340px]">{currentSong.progression}</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-zinc-500">Comping Style:</span>
-          <span class="text-emerald-400 uppercase font-semibold">{currentSong.compingStyle}</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-zinc-500">Drum Groove:</span>
-          <span class="text-sky-400 uppercase font-semibold">{currentSong.drumStyle}</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-zinc-500">Tempo / Bars:</span>
-          <span class="text-zinc-300">{currentSong.bpm} BPM &bull; {currentSong.bars} Bars (~{currentSong.totalDurationSeconds.toFixed(1)}s loop)</span>
-        </div>
-      </section>
     {/if}
 
-    <!-- Main Transport Play Button & Energy Meters -->
-    <section class="flex flex-col sm:flex-row items-center gap-4 mb-8">
+    <!-- CENTRAL CONTROLS PILL -->
+    <div class="pointer-events-auto flex items-center gap-3 bg-zinc-950/80 border border-zinc-800/80 rounded-full px-5 py-2.5 backdrop-blur-xl shadow-2xl">
+      
+      <!-- Quick DSP Knobs Toggle -->
+      <button 
+        onclick={() => showSettings = !showSettings}
+        class="p-2.5 rounded-full {showSettings ? 'bg-amber-500/20 text-amber-300' : 'text-zinc-400 hover:text-zinc-200'} transition-colors cursor-pointer"
+        title="Toggle Sound Design (DSP Knobs)"
+      >
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="4" y1="21" x2="4" y2="14"></line>
+          <line x1="4" y1="10" x2="4" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12" y2="3"></line>
+          <line x1="20" y1="21" x2="20" y2="16"></line>
+          <line x1="20" y1="12" x2="20" y2="3"></line>
+          <line x1="1" y1="14" x2="7" y2="14"></line>
+          <line x1="9" y1="8" x2="15" y2="8"></line>
+          <line x1="17" y1="16" x2="23" y2="16"></line>
+        </svg>
+      </button>
+
+      <!-- MAIN PLAY / PAUSE BUTTON -->
       <button 
         onclick={togglePlay}
-        class="w-full sm:w-auto px-8 py-3.5 {isPlaying ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950' : 'bg-zinc-100 hover:bg-white text-zinc-950'} font-bold rounded-xl transition-all shadow-lg shadow-amber-500/10 cursor-pointer flex items-center justify-center gap-2"
+        class="px-7 py-3 rounded-full font-bold flex items-center gap-2 transition-all cursor-pointer shadow-lg {isPlaying ? 'bg-amber-400 hover:bg-amber-300 text-zinc-950 shadow-amber-500/25' : 'bg-zinc-100 hover:bg-white text-zinc-950 shadow-white/10'}"
       >
         {#if isPlaying}
-          <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
-          Pause Playback
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
+          <span>Pause</span>
         {:else}
-          <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-          Play Lo-Fi Beat
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <span>Play</span>
         {/if}
       </button>
 
-      <!-- Real-time Reactive Frequency Meters -->
-      <div class="flex-1 w-full bg-zinc-950/70 border border-zinc-800 rounded-xl p-3 flex items-center justify-around gap-2 font-mono text-[10px] text-zinc-400">
-        <div class="flex-1 flex flex-col items-center gap-1">
-          <span>BASS</span>
-          <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
-            <div class="h-full bg-amber-500 transition-all duration-75" style="width: {Math.min(100, bassEnergy * 180)}%"></div>
-          </div>
-        </div>
-        <div class="flex-1 flex flex-col items-center gap-1">
-          <span>MIDS</span>
-          <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
-            <div class="h-full bg-emerald-400 transition-all duration-75" style="width: {Math.min(100, midEnergy * 180)}%"></div>
-          </div>
-        </div>
-        <div class="flex-1 flex flex-col items-center gap-1">
-          <span>HIGHS</span>
-          <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
-            <div class="h-full bg-sky-400 transition-all duration-75" style="width: {Math.min(100, highEnergy * 220)}%"></div>
-          </div>
-        </div>
-      </div>
-    </section>
+      <!-- Roll Next Seed Button -->
+      <button 
+        onclick={rollNewSeed}
+        class="p-2.5 text-zinc-400 hover:text-amber-300 transition-colors cursor-pointer"
+        title="Next Beat (Roll Seed)"
+      >
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="5 4 15 12 5 20"></polyline>
+          <line x1="19" y1="5" x2="19" y2="19"></line>
+        </svg>
+      </button>
+    </div>
 
-    <!-- Real-time DSP Control Sliders -->
-    <section class="border-t border-zinc-800 pt-6">
-      <h2 class="text-xs font-mono uppercase tracking-wider text-zinc-400 mb-4">Lo-Fi Sound Design (DSP Knobs)</h2>
-      
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
-        <!-- Lowpass Filter Cutoff -->
-        <div class="bg-zinc-950/40 p-3 rounded-xl border border-zinc-800/60">
-          <div class="flex justify-between mb-1">
-            <span class="text-zinc-300">Warmth (Filter Cutoff)</span>
-            <span class="text-amber-400">{params.filterCutoff} Hz</span>
-          </div>
-          <input 
-            type="range" 
-            min="800" 
-            max="9000" 
-            step="100"
-            value={params.filterCutoff} 
-            oninput={(e) => handleParamChange('filterCutoff', Number((e.target as HTMLInputElement).value))}
-            class="w-full accent-amber-400 cursor-pointer"
-          />
-          <p class="text-[10px] text-zinc-500 mt-1">Cuts digital highs for vintage muffled tone</p>
-        </div>
+  </footer>
+</div>
 
-        <!-- Tape Wow & Flutter -->
-        <div class="bg-zinc-950/40 p-3 rounded-xl border border-zinc-800/60">
-          <div class="flex justify-between mb-1">
-            <span class="text-zinc-300">Tape Wow & Flutter</span>
-            <span class="text-amber-400">{Math.round(params.tapeWobbleDepth * 100)}%</span>
-          </div>
-          <input 
-            type="range" 
-            min="0.0" 
-            max="1.0" 
-            step="0.05"
-            value={params.tapeWobbleDepth} 
-            oninput={(e) => handleParamChange('tapeWobbleDepth', Number((e.target as HTMLInputElement).value))}
-            class="w-full accent-amber-400 cursor-pointer"
-          />
-          <p class="text-[10px] text-zinc-500 mt-1">LFO pitch wobble of worn cassette tape</p>
-        </div>
-
-        <!-- Vinyl Crackle Volume -->
-        <div class="bg-zinc-950/40 p-3 rounded-xl border border-zinc-800/60">
-          <div class="flex justify-between mb-1">
-            <span class="text-zinc-300">Vinyl Dust & Crackle</span>
-            <span class="text-amber-400">{Math.round(params.vinylVolume * 100)}%</span>
-          </div>
-          <input 
-            type="range" 
-            min="0.0" 
-            max="0.8" 
-            step="0.05"
-            value={params.vinylVolume} 
-            oninput={(e) => handleParamChange('vinylVolume', Number((e.target as HTMLInputElement).value))}
-            class="w-full accent-amber-400 cursor-pointer"
-          />
-          <p class="text-[10px] text-zinc-500 mt-1">Continuous needle hiss and dust pops</p>
-        </div>
-
-        <!-- Sidechain Pump -->
-        <div class="bg-zinc-950/40 p-3 rounded-xl border border-zinc-800/60">
-          <div class="flex justify-between mb-1">
-            <span class="text-zinc-300">Sidechain Ducking</span>
-            <span class="text-amber-400">{Math.round(params.sidechainStrength * 100)}%</span>
-          </div>
-          <input 
-            type="range" 
-            min="0.0" 
-            max="1.0" 
-            step="0.05"
-            value={params.sidechainStrength} 
-            oninput={(e) => handleParamChange('sidechainStrength', Number((e.target as HTMLInputElement).value))}
-            class="w-full accent-amber-400 cursor-pointer"
-          />
-          <p class="text-[10px] text-zinc-500 mt-1">Ducks piano chords when kick triggers</p>
-        </div>
-      </div>
-    </section>
-
-  </div>
-</main>
+<style>
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translate(-50%, -10px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+</style>

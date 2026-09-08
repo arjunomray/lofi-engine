@@ -229,13 +229,14 @@ export class AudioEngine {
         bass: 0,
         mids: 0,
         highs: 0,
+        treble: 0,
         waveform: new Float32Array(0),
         frequency: new Uint8Array(0)
       };
     }
 
     this.analyser.getByteFrequencyData(this.freqDataArray as any);
-    this.analyser.getFloatTimeDomainData(this.timeDataArray);
+    this.analyser.getFloatTimeDomainData(this.timeDataArray as any);
 
     const binCount = this.analyser.frequencyBinCount; // 256 bins for fftSize 512
     const sampleRate = this.ctx?.sampleRate || 44100;
@@ -265,6 +266,7 @@ export class AudioEngine {
       bass,
       mids,
       highs,
+      treble: highs,
       waveform: this.timeDataArray,
       frequency: this.freqDataArray
     };

@@ -26,4 +26,5 @@ export interface AudioVisualData {
   highs: number;              // 0.0 to 1.0 (hats, vinyl crackle, 4000 - 16000 Hz)
   waveform: Float32Array;     // Time-domain oscilloscope wave
   frequency: Uint8Array;      // FFT spectrum bins
+  treble: number
 }

@@ -101,7 +101,7 @@
 
   function handleParamChange(key: keyof LoFiDSPParams, value: number) {
     params[key] = value;
-    engine.updateParams({ [key]: value });
+    engine?.updateParams({ [key]: value });
   }
 </script>
 

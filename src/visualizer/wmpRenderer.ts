@@ -42,7 +42,6 @@ export class WMPVisualizer {
   // Car on Street Highway & Audio Details
   private roadOffset: number = 0;
   private carEqPeaks: number[] = new Array(24).fill(0);
-  private nitroSparks: { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; color: string }[] = [];
   private raindrops: Raindrop[] = [];
 
   // Synthwave neon dust & starlight particles
@@ -390,17 +389,6 @@ export class WMPVisualizer {
   // MODE 0: CAR ON STREET CRUISING (RETRO SYNTHWAVE CHASE VIEW)
   // Back window displays live audio details: spectrum, waveform, telemetry
   // =========================================================================
-  private renderCarBackseat(
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number,
-    data: AudioVisualData,
-    isPlaying: boolean,
-    seedText: string
-  ) {
-    this.renderCarOnStreet(ctx, width, height, data, isPlaying, seedText);
-  }
-
   private renderCarOnStreet(
     ctx: CanvasRenderingContext2D,
     width: number,

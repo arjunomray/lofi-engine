@@ -1,6 +1,6 @@
 import { AudioVisualData } from '../audio/types.js';
 
-export type VisualizerMode = 'vintage_vinyl' | 'cassette_tape' | 'analog_scope';
+export type VisualizerMode = 'car_backseat' | 'vintage_vinyl' | 'cassette_tape' | 'analog_scope';
 
 interface Particle {
   x: number;
@@ -23,10 +23,18 @@ interface NeedleRipple {
   color: string;
 }
 
+interface Raindrop {
+  x: number;
+  y: number;
+  length: number;
+  alpha: number;
+  speed: number;
+}
+
 export class WMPVisualizer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private mode: VisualizerMode = 'vintage_vinyl';
+  private mode: VisualizerMode = 'car_backseat';
 
   // Smooth smoothed values for silky 60fps motion
   private smoothedBass: number = 0;
@@ -49,6 +57,10 @@ export class WMPVisualizer {
   private gridOffset: number = 0;
   private stars: { x: number; y: number; size: number; alpha: number; twinkleSpeed: number }[] = [];
 
+  // Car Backseat Highway & Raindrops
+  private roadOffset: number = 0;
+  private raindrops: Raindrop[] = [];
+
   // Synthwave neon dust & starlight particles
   private particles: Particle[] = [];
   private particleCount: number = 55;
@@ -61,6 +73,20 @@ export class WMPVisualizer {
 
     this.initParticles();
     this.initStars();
+    this.initRaindrops();
+  }
+
+  private initRaindrops() {
+    this.raindrops = [];
+    for (let i = 0; i < 28; i++) {
+      this.raindrops.push({
+        x: Math.random() * 0.7 + 0.15,
+        y: Math.random() * 0.6 + 0.1,
+        length: Math.random() * 8 + 4,
+        alpha: Math.random() * 0.4 + 0.15,
+        speed: Math.random() * 0.0004 + 0.0002
+      });
+    }
   }
 
   private initStars() {
@@ -100,7 +126,7 @@ export class WMPVisualizer {
   }
 
   public cycleMode(): VisualizerMode {
-    const modes: VisualizerMode[] = ['vintage_vinyl', 'cassette_tape', 'analog_scope'];
+    const modes: VisualizerMode[] = ['car_backseat', 'vintage_vinyl', 'cassette_tape', 'analog_scope'];
     const nextIdx = (modes.indexOf(this.mode) + 1) % modes.length;
     this.mode = modes[nextIdx];
     return this.mode;
@@ -137,6 +163,9 @@ export class WMPVisualizer {
 
     // 3. Render Active Mode
     switch (this.mode) {
+      case 'car_backseat':
+        this.renderCarBackseat(ctx, width, height, data, isPlaying, seedText);
+        break;
       case 'vintage_vinyl':
         this.renderVintageVinyl(ctx, width, height, data, isPlaying, seedText);
         break;
@@ -386,6 +415,491 @@ export class WMPVisualizer {
     fogGrad.addColorStop(1, 'transparent');
     ctx.fillStyle = fogGrad;
     ctx.fillRect(0, horizonY - 12, width, 34);
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // MODE 0: CAR BACKSEAT CRUISING (SYNTHWAVE HIGHWAY AT NIGHT)
+  // =========================================================================
+  private renderCarBackseat(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    data: AudioVisualData,
+    isPlaying: boolean,
+    seedText: string
+  ) {
+    const horizonY = height * 0.58;
+    const cx = width * 0.5;
+
+    // Road speed & motion
+    const roadSpeed = isPlaying ? 0.014 + (this.smoothedBass * 0.018) : 0.005;
+    this.roadOffset = (this.roadOffset + roadSpeed) % 1;
+
+    // Car suspension bump & subtle chassis sway
+    const carSway = Math.sin(this.timeTick * 0.75) * (width * 0.008);
+    const carBump = Math.sin(this.timeTick * 12) * 0.8 + (isPlaying ? (this.smoothedBass * 2.5) : 0);
+
+    // 1. Neon Highway road lanes on top of ground grid
+    this.renderHighwayRoad(ctx, width, height, horizonY, cx, isPlaying);
+
+    // 2. Windshield glass reflection & sliding raindrops
+    this.renderWindshieldGlass(ctx, width, height, horizonY, carSway, isPlaying);
+
+    // 3. Rearview Mirror (Vibrates to deep sub-bass)
+    this.renderRearviewMirror(ctx, width, height, cx + carSway * 0.5, carBump, this.smoothedBass);
+
+    // 4. Front Dashboard & Center Console (Stereo + Equalizer)
+    this.renderCarDashboard(ctx, width, height, cx + carSway, carBump, data, isPlaying, seedText);
+
+    // 5. Driver & Passenger Front Bucket Seats (Backseat View)
+    this.renderFrontBucketSeats(ctx, width, height, carSway, carBump);
+
+    // 6. Car Cabin Pillars & Ceiling Headliner
+    this.renderCarCabinPerimeter(ctx, width, height);
+  }
+
+  /**
+   * Helper: Render Highway Asphalt & Rushing Neon Dividers
+   */
+  private renderHighwayRoad(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    horizonY: number,
+    cx: number,
+    isPlaying: boolean
+  ) {
+    const roadTopW = width * 0.09;
+    const roadBottomW = width * 0.88;
+
+    ctx.save();
+    // Asphalt road surface
+    ctx.beginPath();
+    ctx.moveTo(cx - roadTopW * 0.5, horizonY);
+    ctx.lineTo(cx + roadTopW * 0.5, horizonY);
+    ctx.lineTo(cx + roadBottomW * 0.5, height);
+    ctx.lineTo(cx - roadBottomW * 0.5, height);
+    ctx.closePath();
+
+    const roadGrad = ctx.createLinearGradient(0, horizonY, 0, height);
+    roadGrad.addColorStop(0, '#0a0314');
+    roadGrad.addColorStop(0.5, '#120622');
+    roadGrad.addColorStop(1, '#1a0730');
+    ctx.fillStyle = roadGrad;
+    ctx.fill();
+
+    // Road Outer Shoulder Lines (Neon Pink on Left, Neon Cyan on Right)
+    ctx.lineWidth = 2.2;
+    ctx.shadowBlur = 10;
+
+    // Left Shoulder Line
+    ctx.strokeStyle = '#ff007f';
+    ctx.shadowColor = '#ff007f';
+    ctx.beginPath();
+    ctx.moveTo(cx - roadTopW * 0.5, horizonY);
+    ctx.lineTo(cx - roadBottomW * 0.5, height);
+    ctx.stroke();
+
+    // Right Shoulder Line
+    ctx.strokeStyle = '#00f0ff';
+    ctx.shadowColor = '#00f0ff';
+    ctx.beginPath();
+    ctx.moveTo(cx + roadTopW * 0.5, horizonY);
+    ctx.lineTo(cx + roadBottomW * 0.5, height);
+    ctx.stroke();
+
+    // Center Dashed Highway Stripes Racing Forward
+    const stripeCount = 10;
+    ctx.fillStyle = '#ffb703'; // Neon Gold/Amber Divider
+    ctx.shadowColor = '#ffb703';
+    ctx.shadowBlur = 8;
+
+    for (let i = 0; i < stripeCount; i++) {
+      const t = (i + this.roadOffset) / stripeCount;
+      const stripeY = horizonY + Math.pow(t, 2.5) * (height - horizonY);
+      const stripeH = 3 + Math.pow(t, 2.2) * 38;
+      const stripeW = 2 + t * 6;
+
+      ctx.fillRect(cx - stripeW * 0.5, stripeY, stripeW, stripeH);
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Helper: Windshield Glass Reflections & Raindrops
+   */
+  private renderWindshieldGlass(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    horizonY: number,
+    carSway: number,
+    isPlaying: boolean
+  ) {
+    ctx.save();
+
+    // Soft diagonal glass reflection glare
+    const glassGrad = ctx.createLinearGradient(width * 0.15, 0, width * 0.85, height * 0.7);
+    glassGrad.addColorStop(0, 'rgba(0, 240, 255, 0.04)');
+    glassGrad.addColorStop(0.4, 'transparent');
+    glassGrad.addColorStop(0.7, 'rgba(255, 0, 127, 0.03)');
+    glassGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = glassGrad;
+    ctx.fillRect(0, 0, width, horizonY + height * 0.2);
+
+    // Sliding Raindrops on the Windshield
+    for (const drop of this.raindrops) {
+      drop.y += drop.speed * (isPlaying ? 1.4 : 0.8);
+      if (drop.y > 0.72) {
+        drop.y = 0.12;
+        drop.x = Math.random() * 0.7 + 0.15;
+      }
+
+      const dx = (drop.x * width) + carSway * 0.5;
+      const dy = drop.y * height;
+
+      // Drop streak
+      ctx.strokeStyle = `rgba(0, 240, 255, ${drop.alpha * 0.6})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(dx, dy - drop.length);
+      ctx.lineTo(dx, dy);
+      ctx.stroke();
+
+      // Drop head
+      ctx.beginPath();
+      ctx.arc(dx, dy, 1.6, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${drop.alpha})`;
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 4;
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Helper: Hanging Rearview Mirror (Vibrates to Sub-Bass)
+   */
+  private renderRearviewMirror(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    x: number,
+    carBump: number,
+    bass: number
+  ) {
+    ctx.save();
+    const jitter = (Math.random() - 0.5) * bass * 2.2;
+    const my = height * 0.13 + carBump + jitter;
+    const mw = Math.min(width * 0.22, 120);
+    const mh = mw * 0.28;
+
+    // Slender mount from ceiling
+    ctx.strokeStyle = '#2d1844';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, my);
+    ctx.stroke();
+
+    // Mirror Beveled Housing
+    this.roundRect(ctx, x - mw * 0.5, my, mw, mh, 7);
+    ctx.fillStyle = '#0f051c';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 14;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Mirror Glass Surface
+    this.roundRect(ctx, x - mw * 0.5 + 2.5, my + 2.5, mw - 5, mh - 5, 5);
+    const mirrorGrad = ctx.createLinearGradient(x - mw * 0.5, my, x + mw * 0.5, my + mh);
+    mirrorGrad.addColorStop(0, '#1a0730');
+    mirrorGrad.addColorStop(0.5, '#0c0418');
+    mirrorGrad.addColorStop(1, '#220840');
+    ctx.fillStyle = mirrorGrad;
+    ctx.fill();
+
+    // Mirror glare streak
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x - mw * 0.35, my + mh - 4);
+    ctx.lineTo(x + mw * 0.35, my + 4);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  /**
+   * Helper: Front Dashboard & Center Console with Stereo & Equalizer
+   */
+  private renderCarDashboard(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    cx: number,
+    carBump: number,
+    data: AudioVisualData,
+    isPlaying: boolean,
+    seedText: string
+  ) {
+    ctx.save();
+    const dashY = height * 0.68 + carBump;
+    const consoleW = Math.min(width * 0.36, 210);
+    const consoleH = height - dashY;
+
+    // Center Console Body
+    this.roundRect(ctx, cx - consoleW * 0.5, dashY, consoleW, consoleH, 12);
+    ctx.fillStyle = '#0d0418';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+    ctx.shadowBlur = 25;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Digital Stereo Head Unit Display
+    const stereoW = consoleW * 0.86;
+    const stereoH = Math.min(consoleH * 0.26, 46);
+    const sx = cx - stereoW * 0.5;
+    const sy = dashY + 14;
+
+    this.roundRect(ctx, sx, sy, stereoW, stereoH, 6);
+    ctx.fillStyle = '#05020a';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // VFD / Digital Display Text
+    const cleanSeed = seedText.toUpperCase().slice(0, 14);
+    ctx.fillStyle = '#00f0ff';
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 6;
+    ctx.font = `700 ${Math.max(9, stereoW * 0.06)}px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`► FM • ${cleanSeed}`, cx, sy + stereoH * 0.38);
+
+    // Clock & Volume Indicator
+    ctx.fillStyle = '#ff007f';
+    ctx.font = `600 ${Math.max(7, stereoW * 0.045)}px 'JetBrains Mono', monospace`;
+    ctx.shadowColor = '#ff007f';
+    ctx.shadowBlur = 4;
+    ctx.fillText('11:42 PM • STEREO [DOLBY]', cx, sy + stereoH * 0.75);
+
+    // 5-Band Graphic Equalizer on the Dash
+    const eqY = sy + stereoH + 10;
+    const eqW = stereoW * 0.88;
+    const eqX = cx - eqW * 0.5;
+    const barW = eqW / 6;
+
+    ctx.shadowBlur = 4;
+    for (let b = 0; b < 5; b++) {
+      const freqVal = isPlaying && data.frequency ? (data.frequency[b * 16] || 0) / 255 : 0.08;
+      const numSegments = Math.max(1, Math.round(freqVal * 5));
+      const bx = eqX + b * (barW + 3);
+
+      for (let s = 0; s < numSegments; s++) {
+        const segY = eqY + 22 - (s * 5);
+        const segColor = (s >= 4) ? '#ff007f' : (s >= 2) ? '#ff9900' : '#00f0ff';
+        ctx.fillStyle = segColor;
+        ctx.shadowColor = segColor;
+        ctx.fillRect(bx, segY, barW - 2, 3.5);
+      }
+    }
+
+    // Driver Instrument Pod (Speedometer on Left Dashboard)
+    const gaugeR = 24;
+    const gaugeX = cx - consoleW * 0.72;
+    const gaugeY = dashY + 34;
+
+    if (gaugeX - gaugeR > 0) {
+      ctx.beginPath();
+      ctx.arc(gaugeX, gaugeY, gaugeR, 0, Math.PI * 2);
+      ctx.fillStyle = '#06020c';
+      ctx.fill();
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      // Speedometer Needle (points around 80 MPH)
+      const needleAngle = -Math.PI * 0.3 + (isPlaying ? this.smoothedBass * 0.4 : 0);
+      ctx.save();
+      ctx.translate(gaugeX, gaugeY);
+      ctx.rotate(needleAngle);
+      ctx.strokeStyle = '#ff007f';
+      ctx.lineWidth = 1.8;
+      ctx.shadowColor = '#ff007f';
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, -gaugeR * 0.85);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Helper: Driver & Passenger Front Sport Bucket Seats (Backseat View)
+   */
+  private renderFrontBucketSeats(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    carSway: number,
+    carBump: number
+  ) {
+    const seatW = Math.max(width * 0.27, 160);
+    const seatH = height * 0.62;
+    const seatY = height * 0.44 + carBump;
+
+    // Left Front Seat (Driver)
+    const leftX = width * 0.03 + carSway;
+    this.renderSingleBucketSeat(ctx, leftX, seatY, seatW, seatH, '#00f0ff', true);
+
+    // Right Front Seat (Passenger)
+    const rightX = width - seatW - (width * 0.03) + carSway;
+    this.renderSingleBucketSeat(ctx, rightX, seatY, seatW, seatH, '#ff007f', false);
+  }
+
+  /**
+   * Helper: Render Single Sport Bucket Seat Contour
+   */
+  private renderSingleBucketSeat(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    rimColor: string,
+    isLeft: boolean
+  ) {
+    ctx.save();
+
+    // Headrest
+    const headW = w * 0.42;
+    const headH = h * 0.22;
+    const headX = x + w * 0.5 - headW * 0.5;
+    const headY = y - headH * 0.55;
+
+    // Chrome Headrest Posts
+    ctx.strokeStyle = '#9ca3af';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(headX + headW * 0.28, headY + headH * 0.5);
+    ctx.lineTo(headX + headW * 0.28, y + 10);
+    ctx.moveTo(headX + headW * 0.72, headY + headH * 0.5);
+    ctx.lineTo(headX + headW * 0.72, y + 10);
+    ctx.stroke();
+
+    // Headrest Cushion
+    this.roundRect(ctx, headX, headY, headW, headH, 12);
+    ctx.fillStyle = '#0c0418';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 18;
+    ctx.fill();
+
+    // Headrest Rim Glow
+    ctx.strokeStyle = rimColor;
+    ctx.lineWidth = 1.4;
+    ctx.shadowColor = rimColor;
+    ctx.shadowBlur = 8;
+    ctx.stroke();
+
+    // Main Seat Backrest with Bolsters
+    ctx.beginPath();
+    // Shoulder contour curve
+    ctx.moveTo(x, y + h);
+    ctx.lineTo(x, y + h * 0.35);
+    ctx.bezierCurveTo(
+      x - 10, y + h * 0.15,
+      x + w * 0.2, y,
+      x + w * 0.5, y
+    );
+    ctx.bezierCurveTo(
+      x + w * 0.8, y,
+      x + w + 10, y + h * 0.15,
+      x + w, y + h * 0.35
+    );
+    ctx.lineTo(x + w, y + h);
+    ctx.closePath();
+
+    ctx.fillStyle = '#0d051a'; // Deep obsidian-velour
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+    ctx.shadowBlur = 24;
+    ctx.fill();
+
+    // Seat Bolster Seam Highlight
+    ctx.strokeStyle = rimColor;
+    ctx.lineWidth = 1.6;
+    ctx.shadowColor = rimColor;
+    ctx.shadowBlur = 8;
+    ctx.stroke();
+
+    // Center Vertical Inset Stitching
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1;
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.35, y + h * 0.15);
+    ctx.lineTo(x + w * 0.35, y + h);
+    ctx.moveTo(x + w * 0.65, y + h * 0.15);
+    ctx.lineTo(x + w * 0.65, y + h);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  /**
+   * Helper: Car Cabin Roof & Side Window Pillars
+   */
+  private renderCarCabinPerimeter(ctx: CanvasRenderingContext2D, width: number, height: number) {
+    ctx.save();
+
+    // Top Headliner (Ceiling)
+    const roofH = height * 0.07;
+    ctx.fillStyle = '#090312';
+    ctx.fillRect(0, 0, width, roofH);
+
+    // Ceiling Bevel & Ambient Dome Light Glow
+    const domeGlow = ctx.createRadialGradient(width * 0.5, 0, 10, width * 0.5, 0, width * 0.4);
+    domeGlow.addColorStop(0, 'rgba(168, 85, 247, 0.25)');
+    domeGlow.addColorStop(1, 'transparent');
+    ctx.fillStyle = domeGlow;
+    ctx.fillRect(0, 0, width, roofH * 2);
+
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, roofH);
+    ctx.lineTo(width, roofH);
+    ctx.stroke();
+
+    // Left A-Pillar (Window frame)
+    ctx.fillStyle = '#080210';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(width * 0.06, 0);
+    ctx.lineTo(0, height * 0.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // Right A-Pillar (Window frame)
+    ctx.beginPath();
+    ctx.moveTo(width, 0);
+    ctx.lineTo(width - width * 0.06, 0);
+    ctx.lineTo(width, height * 0.5);
+    ctx.closePath();
+    ctx.fill();
+
     ctx.restore();
   }
 

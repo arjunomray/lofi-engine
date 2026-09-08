@@ -21,7 +21,7 @@
   let isPlaying = $state(false);
   let showSettings = $state(false);
   let transitionNotice = $state('');
-  let currentMode = $state<VisualizerMode>('vintage_vinyl');
+  let currentMode = $state<VisualizerMode>('car_backseat');
 
   // DSP Controls
   let params = $state<LoFiDSPParams>({ ...DEFAULT_DSP_PARAMS });
@@ -110,6 +110,7 @@
 
   function formatModeName(m: VisualizerMode): string {
     switch (m) {
+      case 'car_backseat': return 'Car Backseat';
       case 'vintage_vinyl': return 'Vintage Vinyl';
       case 'cassette_tape': return 'Cassette Tape';
       case 'analog_scope': return 'Analog Scope';

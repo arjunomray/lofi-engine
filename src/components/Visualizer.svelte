@@ -43,7 +43,7 @@
   }
 
   export function cycleMode(): VisualizerMode {
-    if (!visualizer) return 'vintage_vinyl';
+    if (!visualizer) return 'car_backseat';
     const nextMode = visualizer.cycleMode();
     onModeChanged(nextMode);
     return nextMode;

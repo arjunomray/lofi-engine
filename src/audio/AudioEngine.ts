@@ -1,4 +1,5 @@
 import { GeneratedSong, NoteEvent, GM_DRUMS } from '../generator/types.js';
+import { LoFiGenerator } from '../generator/index.js';
 import { PlaybackState, LoFiDSPParams, DEFAULT_DSP_PARAMS, AudioVisualData } from './types.js';
 import { LookaheadScheduler } from './Scheduler.js';
 import { RhodesSynth } from './synths/RhodesSynth.js';
@@ -27,6 +28,7 @@ export class AudioEngine {
   private sidechain: SidechainDucker | null = null;
 
   // Master & Visualizer Nodes
+  private crossfadeGain: GainNode | null = null;
   private masterGain: GainNode | null = null;
   private analyser: AnalyserNode | null = null;
 
@@ -34,6 +36,11 @@ export class AudioEngine {
   private state: PlaybackState = 'stopped';
   private currentSong: GeneratedSong | null = null;
   private params: LoFiDSPParams = { ...DEFAULT_DSP_PARAMS };
+
+  // Auto-Evolve Loop Mode
+  private autoEvolve: boolean = true;
+  private loopsBeforeEvolve: number = 2; // Default: evolve every 2 loop plays (1-2 times)
+  private onSongChangeCallback?: (newSong: GeneratedSong) => void;
 
   // Frequency analysis arrays
   private freqDataArray: Uint8Array | null = null;
@@ -57,6 +64,11 @@ export class AudioEngine {
     this.masterGain = this.ctx.createGain();
     this.masterGain.gain.value = this.params.masterVolume;
 
+    // Crossfade bus for seamless song-to-song transitions
+    this.crossfadeGain = this.ctx.createGain();
+    this.crossfadeGain.gain.value = 1.0;
+    this.crossfadeGain.connect(this.masterGain);
+
     this.analyser = this.ctx.createAnalyser();
     this.analyser.fftSize = 512;
     this.analyser.smoothingTimeConstant = 0.82;
@@ -75,11 +87,11 @@ export class AudioEngine {
     this.sidechain = new SidechainDucker(this.ctx, this.params.sidechainStrength);
 
     // 3. Routing:
-    // Tape Output -> Lo-Fi Filter -> MasterGain
+    // Tape Output -> Lo-Fi Filter -> CrossfadeGain
     this.tapeEffects.outputNode.connect(this.lofiFilter.node);
-    this.lofiFilter.node.connect(this.masterGain);
+    this.lofiFilter.node.connect(this.crossfadeGain);
 
-    // Vinyl Noise -> MasterGain directly
+    // Vinyl Noise -> MasterGain directly (stays constant during crossfade for acoustic glue)
     this.vinylNoise.outputNode.connect(this.masterGain);
 
     // 4. Initialize Synths
@@ -92,19 +104,23 @@ export class AudioEngine {
     this.rhodes.outputNode.connect(this.sidechain.node);
     this.sidechain.node.connect(this.tapeEffects.inputNode);
 
-    // Lead -> Tape Input
+    // Lead & Bass -> Tape Input
     this.lead.outputNode.connect(this.tapeEffects.inputNode);
-
-    // Bass -> Tape Input (warm lowpass saturation)
     this.bass.outputNode.connect(this.tapeEffects.inputNode);
 
-    // Drums -> MasterGain (bypasses tape delay to keep punchy transient attack)
-    this.drums.outputNode.connect(this.masterGain);
+    // Drums -> CrossfadeGain (ducks during crossfades with the rest of the music)
+    this.drums.outputNode.connect(this.crossfadeGain);
 
-    // 5. Initialize Scheduler
-    this.scheduler = new LookaheadScheduler(this.ctx, (event, scheduledTime) => {
-      this.dispatchNote(event, scheduledTime);
-    });
+    // 5. Initialize Scheduler with onLoopCycle for Auto-Evolve & Crossfading
+    this.scheduler = new LookaheadScheduler(
+      this.ctx, 
+      (event, scheduledTime) => {
+        this.dispatchNote(event, scheduledTime);
+      },
+      (completedLoops, nextLoopStartTime) => {
+        return this.handleLoopCycle(completedLoops, nextLoopStartTime);
+      }
+    );
 
     // Start background vinyl crackle
     this.vinylNoise.start(this.ctx);
@@ -256,5 +272,74 @@ export class AudioEngine {
 
   public getProgress(): number {
     return this.scheduler?.getPlaybackProgress() || 0;
+  }
+
+  /**
+   * Handles loop iteration boundary. If autoEvolve is active and completedLoops >= loopsBeforeEvolve,
+   * generates the next seed and triggers a smooth DJ crossfade!
+   */
+  private handleLoopCycle(completedLoops: number, nextLoopStartTime: number): { nextSong?: GeneratedSong } | void {
+    if (!this.autoEvolve) return;
+
+    if (completedLoops >= this.loopsBeforeEvolve) {
+      const nextSeed = this.generateNextSeed();
+      const nextSong = LoFiGenerator.generate({ seed: nextSeed });
+      this.currentSong = nextSong;
+
+      // Trigger smooth crossfade dip and swell across the loop boundary
+      this.triggerCrossfade(nextLoopStartTime, 2.0);
+
+      // Notify UI listeners (e.g. Svelte App component)
+      if (this.onSongChangeCallback) {
+        this.onSongChangeCallback(nextSong);
+      }
+
+      return { nextSong };
+    }
+  }
+
+  /**
+   * Smoothly crossfades outgoing song into incoming song across the transition boundary.
+   */
+  public triggerCrossfade(transitionTime: number, duration: number = 2.0) {
+    if (!this.ctx || !this.crossfadeGain) return;
+    const gainParam = this.crossfadeGain.gain;
+    const half = duration / 2;
+    const startTime = Math.max(this.ctx.currentTime, transitionTime - half);
+
+    gainParam.cancelScheduledValues(startTime);
+    gainParam.setValueAtTime(gainParam.value, startTime);
+    // Smoothly dip to 0.35 at boundary
+    gainParam.exponentialRampToValueAtTime(0.35, transitionTime);
+    // Swell back up to 1.0 as the new beat drops in
+    gainParam.exponentialRampToValueAtTime(1.0, transitionTime + half);
+  }
+
+  /**
+   * Generates a new organic seed for infinite radio progression.
+   */
+  private generateNextSeed(): string {
+    const moods = [
+      'rainy-tokyo', 'midnight-chill', 'coffee-study', 'cloudy-afternoon',
+      'dusty-vinyl', 'cassette-rewind', 'autumn-leaves', 'sunset-drive',
+      'neon-shinjuku', 'sleeping-cat', 'jazz-corner', 'warm-breeze',
+      'late-night', 'ambient-room', 'lofi-cafe'
+    ];
+    const mood = moods[Math.floor(Math.random() * moods.length)];
+    const number = Math.floor(Math.random() * 900) + 100;
+    return `${mood}-${number}`;
+  }
+
+  public setAutoEvolve(enabled: boolean, loopsBeforeEvolve: number = 2, callback?: (newSong: GeneratedSong) => void) {
+    this.autoEvolve = enabled;
+    this.loopsBeforeEvolve = Math.max(1, loopsBeforeEvolve);
+    if (callback) this.onSongChangeCallback = callback;
+  }
+
+  public getAutoEvolve(): { enabled: boolean; loops: number } {
+    return {
+      enabled: this.autoEvolve,
+      loops: this.loopsBeforeEvolve
+    };
   }
 }

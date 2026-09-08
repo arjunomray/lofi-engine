@@ -1,6 +1,7 @@
 import { GeneratedSong, NoteEvent } from '../generator/types.js';
 
 export type NoteScheduleCallback = (event: NoteEvent, scheduledTime: number) => void;
+export type LoopCycleCallback = (completedLoops: number, nextLoopStartTime: number) => { nextSong?: GeneratedSong } | void;
 
 /**
  * Lookahead Web Audio Clock & Loop Scheduler
@@ -16,6 +17,7 @@ export class LookaheadScheduler {
   private ctx: AudioContext;
   private song: GeneratedSong | null = null;
   private onScheduleNote: NoteScheduleCallback;
+  private onLoopCycle?: LoopCycleCallback;
 
   private timerId: number | null = null;
   private lookaheadMs: number = 25.0;     // Frequency of checking (ms)
@@ -27,9 +29,18 @@ export class LookaheadScheduler {
   private eventIndex: number = 0;
   private loopCount: number = 0;
 
-  constructor(ctx: AudioContext, onScheduleNote: NoteScheduleCallback) {
+  constructor(
+    ctx: AudioContext, 
+    onScheduleNote: NoteScheduleCallback,
+    onLoopCycle?: LoopCycleCallback
+  ) {
     this.ctx = ctx;
     this.onScheduleNote = onScheduleNote;
+    this.onLoopCycle = onLoopCycle;
+  }
+
+  public setOnLoopCycle(callback: LoopCycleCallback) {
+    this.onLoopCycle = callback;
   }
 
   public loadSong(song: GeneratedSong) {
@@ -93,6 +104,18 @@ export class LookaheadScheduler {
         // Check if next loop starts within our schedule window
         if (nextLoopStartTime < scheduleUntilTime) {
           this.loopCount++;
+
+          // Check if parent wants to transition/crossfade to a new song on this cycle
+          if (this.onLoopCycle) {
+            const result = this.onLoopCycle(this.loopCount, nextLoopStartTime);
+            if (result && result.nextSong) {
+              this.song = result.nextSong;
+              this.loopDuration = result.nextSong.totalDurationSeconds;
+              this.playbackStartTime = nextLoopStartTime;
+              this.loopCount = 0;
+            }
+          }
+
           this.eventIndex = 0; // Seamless loop!
         } else {
           break;

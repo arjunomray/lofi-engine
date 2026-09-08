@@ -11,6 +11,12 @@
   let currentSong = $state<GeneratedSong | null>(null);
   let isPlaying = $state(false);
 
+  // Loop & Auto-Evolve Mode
+  let autoEvolve = $state(true);
+  let loopsBeforeEvolve = $state(2); // Evolve after 1 or 2 loops
+  let transitionToast = $state('');
+  let isTransitioning = $state(false);
+
   // DSP Controls
   let params = $state<LoFiDSPParams>({ ...DEFAULT_DSP_PARAMS });
 
@@ -25,6 +31,21 @@
 
   onMount(() => {
     engine = new AudioEngine();
+    
+    // Configure Auto-Evolve callback
+    engine.setAutoEvolve(autoEvolve, loopsBeforeEvolve, (newSong) => {
+      currentSong = newSong;
+      seedInput = String(newSong.seed);
+      isTransitioning = true;
+      transitionToast = `🎧 Crossfaded to new seed: "${newSong.seed}"`;
+      setTimeout(() => {
+        isTransitioning = false;
+      }, 2500);
+      setTimeout(() => {
+        transitionToast = '';
+      }, 4500);
+    });
+
     generateNewSong();
 
     // 60 FPS Visual Meter Loop
@@ -76,6 +97,20 @@
     }
   }
 
+  function toggleAutoEvolve() {
+    autoEvolve = !autoEvolve;
+    if (engine) {
+      engine.setAutoEvolve(autoEvolve, loopsBeforeEvolve);
+    }
+  }
+
+  function setLoopCycle(count: number) {
+    loopsBeforeEvolve = count;
+    if (engine) {
+      engine.setAutoEvolve(autoEvolve, loopsBeforeEvolve);
+    }
+  }
+
   function handleParamChange(key: keyof LoFiDSPParams, value: number) {
     params[key] = value;
     engine.updateParams({ [key]: value });
@@ -84,8 +119,19 @@
 
 <main class="min-h-screen bg-[#0d0f12] text-zinc-100 flex flex-col items-center justify-center p-4 md:p-8 font-sans selection:bg-amber-500/20">
   <!-- Container Card -->
-  <div class="w-full max-w-2xl bg-zinc-900/90 border border-zinc-800/80 rounded-2xl p-6 md:p-8 shadow-2xl backdrop-blur-md">
+  <div class="w-full max-w-2xl bg-zinc-900/90 border border-zinc-800/80 rounded-2xl p-6 md:p-8 shadow-2xl backdrop-blur-md relative overflow-hidden">
     
+    <!-- Crossfade Glow Indicator Banner -->
+    {#if transitionToast}
+      <div class="mb-4 px-4 py-2 bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded-xl text-xs font-mono flex items-center justify-between animate-fade-in">
+        <span class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+          {transitionToast}
+        </span>
+        <span class="text-[10px] text-amber-400/80 uppercase tracking-widest font-semibold">Crossfading</span>
+      </div>
+    {/if}
+
     <!-- Header -->
     <header class="flex items-center justify-between border-b border-zinc-800 pb-5 mb-6">
       <div>
@@ -93,23 +139,71 @@
           <span class="inline-block w-2.5 h-2.5 rounded-full {isPlaying ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-600'}"></span>
           <h1 class="text-xl md:text-2xl font-bold tracking-tight text-zinc-100 font-mono">Lo-Fi Web Audio Engine</h1>
         </div>
-        <p class="text-xs md:text-sm text-zinc-400 mt-1">Chunk 2: Real-time Web Audio Synthesizer & DSP Chain</p>
+        <p class="text-xs md:text-sm text-zinc-400 mt-1">Real-time Web Audio Synthesizer & Auto-Evolve Loop Mode</p>
       </div>
       <div class="px-3 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-mono rounded-full">
         100% Client-Side
       </div>
     </header>
 
+    <!-- Auto-Evolve Loop Mode Banner / Controls -->
+    <section class="mb-6 p-3.5 bg-zinc-950/70 border border-zinc-800/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <button 
+          onclick={toggleAutoEvolve}
+          class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none {autoEvolve ? 'bg-amber-500' : 'bg-zinc-700'}"
+          role="switch"
+          aria-checked={autoEvolve}
+          title="Toggle Auto-Evolve Loop Mode"
+        >
+          <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-zinc-950 shadow ring-0 transition duration-200 ease-in-out {autoEvolve ? 'translate-x-5' : 'translate-x-0'}"></span>
+        </button>
+        <div>
+          <div class="text-xs font-mono font-semibold text-zinc-200 flex items-center gap-1.5">
+            <span>Infinite Radio (Auto-Evolve)</span>
+            {#if autoEvolve}
+              <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+            {/if}
+          </div>
+          <p class="text-[10px] text-zinc-400">Plays seed 1-2 times, then crossfades to a new beat</p>
+        </div>
+      </div>
+
+      <!-- Loop Duration Selector -->
+      {#if autoEvolve}
+        <div class="flex items-center gap-1.5 bg-zinc-900 border border-zinc-700/60 rounded-lg p-1 self-start sm:self-auto text-[11px] font-mono">
+          <span class="text-zinc-400 px-1.5 text-[10px]">Change every:</span>
+          <button 
+            onclick={() => setLoopCycle(1)}
+            class="px-2 py-0.5 rounded cursor-pointer transition-colors {loopsBeforeEvolve === 1 ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30' : 'text-zinc-400 hover:text-zinc-200'}"
+          >
+            1 loop (~12s)
+          </button>
+          <button 
+            onclick={() => setLoopCycle(2)}
+            class="px-2 py-0.5 rounded cursor-pointer transition-colors {loopsBeforeEvolve === 2 ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30' : 'text-zinc-400 hover:text-zinc-200'}"
+          >
+            2 loops (~25s)
+          </button>
+        </div>
+      {/if}
+    </section>
+
     <!-- Seed & Generation Control -->
     <section class="mb-6">
-      <label for="seed-input" class="block text-xs font-mono uppercase tracking-wider text-zinc-400 mb-2">Song Seed (DNA)</label>
+      <div class="flex items-center justify-between mb-2">
+        <label for="seed-input" class="text-xs font-mono uppercase tracking-wider text-zinc-400">Active Seed (DNA)</label>
+        {#if autoEvolve}
+          <span class="text-[10px] font-mono text-amber-400/90 animate-pulse">Auto-updating on loop cycle</span>
+        {/if}
+      </div>
       <div class="flex gap-2">
         <input 
           id="seed-input"
           type="text" 
           bind:value={seedInput}
           placeholder="Enter seed (e.g. rainy-tokyo, 42)"
-          class="flex-1 bg-zinc-950/80 border border-zinc-700/60 rounded-xl px-4 py-2.5 text-sm font-mono text-amber-200 focus:outline-none focus:border-amber-400/80 transition-colors"
+          class="flex-1 bg-zinc-950/80 border border-zinc-700/60 rounded-xl px-4 py-2.5 text-sm font-mono text-amber-200 focus:outline-none focus:border-amber-400/80 transition-colors {isTransitioning ? 'border-amber-400 ring-2 ring-amber-400/20' : ''}"
           onkeydown={(e) => e.key === 'Enter' && generateNewSong()}
         />
         <button 
@@ -131,7 +225,7 @@
 
     <!-- Metadata Display -->
     {#if currentSong}
-      <section class="bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-4 mb-6 font-mono text-xs space-y-1.5">
+      <section class="bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-4 mb-6 font-mono text-xs space-y-1.5 transition-all {isTransitioning ? 'border-amber-500/50 shadow-md shadow-amber-500/10' : ''}">
         <div class="flex justify-between">
           <span class="text-zinc-500">Progression:</span>
           <span class="text-amber-300 font-semibold truncate max-w-[340px]">{currentSong.progression}</span>

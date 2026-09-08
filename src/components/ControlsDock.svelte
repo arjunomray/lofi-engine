@@ -9,7 +9,7 @@
 <div class="glass-pill control-pill">
   <!-- DSP Knobs Toggle Button -->
   <button 
-    onclick={onToggleSettings}
+    onclick={(e) => { e.stopPropagation(); onToggleSettings(); }}
     class="btn-icon {showSettings ? 'active' : ''}"
     title="Toggle DSP sound knobs"
   >
@@ -28,7 +28,7 @@
 
   <!-- MAIN PLAY / PAUSE BUTTON -->
   <button 
-    onclick={onTogglePlay}
+    onclick={(e) => { e.stopPropagation(); onTogglePlay(); }}
     class="btn-play {isPlaying ? 'playing' : ''}"
   >
     {#if isPlaying}
@@ -42,7 +42,7 @@
 
   <!-- Next Beat / Roll Button -->
   <button 
-    onclick={onNextBeat}
+    onclick={(e) => { e.stopPropagation(); onNextBeat(); }}
     class="btn-icon"
     title="Next Beat (Roll Seed)"
   >
@@ -60,5 +60,6 @@
     gap: 12px;
     padding: 6px 14px;
     border-radius: 9999px;
+    pointer-events: auto;
   }
 </style>

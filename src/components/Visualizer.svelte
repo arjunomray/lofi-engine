@@ -52,8 +52,6 @@
 <canvas 
   bind:this={canvasElement} 
   class="fullscreen-canvas"
-  onclick={() => cycleMode()}
-  title="Click to cycle visualizer mode"
 ></canvas>
 
 <div class="crt-overlay"></div>

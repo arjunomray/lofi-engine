@@ -86,6 +86,7 @@
     padding: 20px 24px;
     border-radius: 20px;
     font-size: 12px;
+    pointer-events: auto;
   }
 
   .dsp-header {

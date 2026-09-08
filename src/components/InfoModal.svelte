@@ -12,15 +12,6 @@
     }
   }
 
-  const shortcuts = [
-    { key: 'P', desc: 'Play / Pause music playback' },
-    { key: 'N', desc: 'Next Song (Generate & roll new seed)' },
-    { key: 'V', desc: 'Cycle Visualizer mode (Car on Street, Vinyl, Cassette, Scope)' },
-    { key: 'S', desc: 'Open Seed menu & history list' },
-    { key: 'D', desc: 'Open DAW sound design knobs' },
-    { key: 'I', desc: 'Toggle this info & shortcuts menu' },
-    { key: 'ESC', desc: 'Close any active popups / menus' },
-  ];
 </script>
 
 {#if show}
@@ -39,29 +30,15 @@
             <line x1="12" y1="16" x2="12" y2="12"/>
             <line x1="12" y1="8" x2="12.01" y2="8"/>
           </svg>
-          <span class="modal-title">SYSTEM CONTROLS & INFO</span>
+          <span class="modal-title">ALGORITHMIC AUDIO ENGINE</span>
         </div>
-        <button onclick={onClose} class="close-btn" title="Close (Esc)">✕</button>
+        <button onclick={onClose} class="close-btn" title="Close">✕</button>
       </div>
 
       <!-- Content Scrollable Body -->
       <div class="modal-body">
-        <!-- Section 1: Keyboard Shortcuts -->
         <div class="section-title">
-          <span>KEYBOARD SHORTCUTS</span>
-        </div>
-        <div class="shortcuts-grid">
-          {#each shortcuts as sc}
-            <div class="shortcut-row">
-              <kbd class="key-badge">{sc.key}</kbd>
-              <span class="shortcut-desc">{sc.desc}</span>
-            </div>
-          {/each}
-        </div>
-
-        <!-- Section 2: Real-time Algorithmic Music Info -->
-        <div class="section-title" style="margin-top: 20px;">
-          <span>REAL-TIME ALGORITHMIC AUDIO</span>
+          <span>REAL-TIME IN-BROWSER SYNTHESIS</span>
         </div>
         <div class="info-card">
           <div class="info-badge">
@@ -177,45 +154,7 @@
     font-weight: 600;
   }
 
-  .shortcuts-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
 
-  .shortcut-row {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 6px 10px;
-    border-radius: 8px;
-    background: rgba(0, 240, 255, 0.04);
-    border: 1px solid rgba(0, 240, 255, 0.1);
-    transition: background 0.2s;
-  }
-
-  .shortcut-row:hover {
-    background: rgba(0, 240, 255, 0.09);
-    border-color: rgba(0, 240, 255, 0.25);
-  }
-
-  .key-badge {
-    min-width: 32px;
-    text-align: center;
-    padding: 3px 8px;
-    background: rgba(8, 3, 16, 0.9);
-    border: 1px solid #00f0ff;
-    color: #00f0ff;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    box-shadow: 0 0 8px rgba(0, 240, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  }
-
-  .shortcut-desc {
-    font-size: 12px;
-    color: #e2d9f3;
-  }
 
   .info-card {
     padding: 14px;

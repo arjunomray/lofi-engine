@@ -7,7 +7,7 @@
   export let engine: AudioEngine;
   export let isPlaying: boolean;
   export let seed: string = 'lofi-vibe';
-  export let onModeChanged: (mode: VisualizerMode) => void;
+  export let onModeChanged: ((mode: VisualizerMode) => void) | undefined = undefined;
 
   let canvasElement: HTMLCanvasElement;
   let visualizer: WMPVisualizer;
@@ -45,7 +45,7 @@
   export function cycleMode(): VisualizerMode {
     if (!visualizer) return 'car_backseat';
     const nextMode = visualizer.cycleMode();
-    onModeChanged(nextMode);
+    if (onModeChanged) onModeChanged(nextMode);
     return nextMode;
   }
 </script>

@@ -23,7 +23,6 @@
   let showSettings = $state(false);
   let showInfoModal = $state(false);
   let transitionNotice = $state('');
-  let currentMode = $state<VisualizerMode>('car_backseat');
 
   // DSP Controls
   let params = $state<LoFiDSPParams>({ ...DEFAULT_DSP_PARAMS });
@@ -37,40 +36,6 @@
     const clean = seed.trim();
     if (!clean) return;
     recentSeeds = [clean, ...recentSeeds.filter(s => s !== clean)].slice(0, 5);
-  }
-
-  function handleGlobalKeyDown(e: KeyboardEvent) {
-    // Ignore keyboard shortcuts when typing in an input, textarea, or contentEditable
-    const target = e.target as HTMLElement | null;
-    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-      return;
-    }
-
-    const key = e.key.toLowerCase();
-
-    if (key === 'p') {
-      e.preventDefault();
-      togglePlay();
-    } else if (key === 'n') {
-      e.preventDefault();
-      rollNewSeed();
-    } else if (key === 'v') {
-      e.preventDefault();
-      handleModeCycle();
-    } else if (key === 's') {
-      e.preventDefault();
-      topBarRef?.toggleSeedMenu();
-    } else if (key === 'd') {
-      e.preventDefault();
-      showSettings = !showSettings;
-    } else if (key === 'i') {
-      e.preventDefault();
-      showInfoModal = !showInfoModal;
-    } else if (e.key === 'Escape') {
-      if (showInfoModal) showInfoModal = false;
-      if (showSettings) showSettings = false;
-      topBarRef?.closeSeedMenu();
-    }
   }
 
   onMount(() => {
@@ -87,14 +52,7 @@
       }, 3500);
     });
 
-    window.addEventListener('keydown', handleGlobalKeyDown);
     generateSong(seedInput);
-  });
-
-  onDestroy(() => {
-    if (typeof window !== 'undefined') {
-      window.removeEventListener('keydown', handleGlobalKeyDown);
-    }
   });
 
   function generateSong(seed: string) {
@@ -141,24 +99,9 @@
     }
   }
 
-  function handleModeCycle() {
-    if (visualizerRef) {
-      currentMode = visualizerRef.cycleMode();
-    }
-  }
-
   function handleParamChange(key: keyof LoFiDSPParams, value: number) {
     params[key] = value;
     engine.updateParams({ [key]: value });
-  }
-
-  function formatModeName(m: VisualizerMode): string {
-    switch (m) {
-      case 'car_backseat': return 'Car on Street';
-      case 'vintage_vinyl': return 'Vintage Vinyl';
-      case 'cassette_tape': return 'Cassette Tape';
-      case 'analog_scope': return 'Analog Scope';
-    }
   }
 </script>
 
@@ -170,7 +113,6 @@
       {engine}
       {isPlaying}
       seed={seedInput}
-      onModeChanged={(m) => currentMode = m}
     />
   {/if}
 
@@ -179,11 +121,9 @@
     bind:this={topBarRef}
     seed={seedInput}
     {isPlaying}
-    currentMode={formatModeName(currentMode)}
     {recentSeeds}
     onRollSeed={rollNewSeed}
     onSetSeed={handleSetSeed}
-    onCycleMode={handleModeCycle}
   />
 
   <!-- 3. CROSSFADE NOTIFICATION TOAST -->
@@ -215,8 +155,8 @@
     <button 
       onclick={() => showInfoModal = !showInfoModal}
       class="btn-glass btn-info {showInfoModal ? 'active' : ''}"
-      title="Shortcuts & System Info (Press I)"
-      aria-label="Shortcuts & Info"
+      title="System Info"
+      aria-label="System Info"
     >
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="10"/>

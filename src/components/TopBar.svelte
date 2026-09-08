@@ -4,11 +4,11 @@
   interface Props {
     seed: string;
     isPlaying: boolean;
-    currentMode: string;
+    currentMode?: string;
     recentSeeds?: string[];
     onRollSeed: () => void;
     onSetSeed: (newSeed: string) => void;
-    onCycleMode: () => void;
+    onCycleMode?: () => void;
   }
 
   let {
@@ -25,6 +25,28 @@
   let typedSeed = $state('');
   let inputElement = $state<HTMLInputElement | null>(null);
   let containerElement = $state<HTMLDivElement | null>(null);
+
+  // Top Right Clock & Session Timer
+  let currentTime = $state('');
+  let sessionTimer = $state('00:00');
+  let startTime = Date.now();
+  let clockInterval: ReturnType<typeof setInterval> | null = null;
+
+  function updateClock() {
+    const now = new Date();
+    currentTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+    const hrs = Math.floor(elapsedSeconds / 3600);
+    const mins = Math.floor((elapsedSeconds % 3600) / 60);
+    const secs = elapsedSeconds % 60;
+
+    if (hrs > 0) {
+      sessionTimer = `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    } else {
+      sessionTimer = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+  }
 
   function toggleDropdown(e?: MouseEvent) {
     if (e) e.stopPropagation();
@@ -75,11 +97,14 @@
   }
 
   onMount(() => {
+    updateClock();
+    clockInterval = setInterval(updateClock, 1000);
     window.addEventListener('click', handleClickOutside);
     window.addEventListener('keydown', handleKeyDown);
   });
 
   onDestroy(() => {
+    if (clockInterval) clearInterval(clockInterval);
     if (typeof window !== 'undefined') {
       window.removeEventListener('click', handleClickOutside);
       window.removeEventListener('keydown', handleKeyDown);
@@ -179,19 +204,22 @@
     {/if}
   </div>
 
-  <!-- Visualizer Mode Switcher -->
-  <button 
-    onclick={onCycleMode}
-    class="btn-glass font-mono"
-    title="Cycle visualizer mode"
-  >
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" stroke-width="2">
-      <polygon points="12 2 2 7 12 12 22 7 12 2"/>
-      <polyline points="2 17 12 22 22 17"/>
-      <polyline points="2 12 12 17 22 12"/>
-    </svg>
-    <span>{currentMode}</span>
-  </button>
+  <!-- Top Right: Current Time | Session Timer -->
+  <div class="glass-pill clock-pill font-mono">
+    <div class="clock-section">
+      <svg class="clock-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <span class="time-display">{currentTime}</span>
+    </div>
+    <div class="clock-divider"></div>
+    <div class="timer-section">
+      <span class="timer-dot"></span>
+      <span class="timer-label">SESSION:</span>
+      <span class="timer-display">{sessionTimer}</span>
+    </div>
+  </div>
 </header>
 
 <style>
@@ -459,5 +487,69 @@
     padding: 2px 6px;
     border-radius: 4px;
     letter-spacing: 0.06em;
+  }
+
+  .clock-pill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    letter-spacing: 0.04em;
+    font-size: 11.5px;
+  }
+
+  .clock-section {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .clock-icon {
+    color: #00f0ff;
+    filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.6));
+  }
+
+  .time-display {
+    color: #e2d9f3;
+    font-weight: 600;
+  }
+
+  .clock-divider {
+    width: 1px;
+    height: 14px;
+    background: rgba(0, 240, 255, 0.25);
+  }
+
+  .timer-section {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .timer-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #00ffaa;
+    box-shadow: 0 0 8px #00ffaa;
+    animation: timerPulse 2s infinite ease-in-out;
+  }
+
+  @keyframes timerPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  .timer-label {
+    color: #9d8db5;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+  }
+
+  .timer-display {
+    color: #ff007f;
+    font-weight: 700;
+    text-shadow: 0 0 8px rgba(255, 0, 127, 0.4);
   }
 </style>

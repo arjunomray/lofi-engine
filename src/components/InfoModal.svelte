@@ -15,7 +15,7 @@
   const shortcuts = [
     { key: 'P', desc: 'Play / Pause music playback' },
     { key: 'N', desc: 'Next Song (Generate & roll new seed)' },
-    { key: 'V', desc: 'Cycle Visualizer mode (Car, Vinyl, Cassette, Scope)' },
+    { key: 'V', desc: 'Cycle Visualizer mode (Car on Street, Vinyl, Cassette, Scope)' },
     { key: 'S', desc: 'Open Seed menu & history list' },
     { key: 'D', desc: 'Open DAW sound design knobs' },
     { key: 'I', desc: 'Toggle this info & shortcuts menu' },

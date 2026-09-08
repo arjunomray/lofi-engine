@@ -57,8 +57,10 @@ export class WMPVisualizer {
   private gridOffset: number = 0;
   private stars: { x: number; y: number; size: number; alpha: number; twinkleSpeed: number }[] = [];
 
-  // Car Backseat Highway & Raindrops
+  // Car on Street Highway & Audio Details
   private roadOffset: number = 0;
+  private carEqPeaks: number[] = new Array(24).fill(0);
+  private nitroSparks: { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; color: string }[] = [];
   private raindrops: Raindrop[] = [];
 
   // Synthwave neon dust & starlight particles
@@ -419,9 +421,21 @@ export class WMPVisualizer {
   }
 
   // =========================================================================
-  // MODE 0: CAR BACKSEAT CRUISING (SYNTHWAVE HIGHWAY AT NIGHT)
+  // MODE 0: CAR ON STREET CRUISING (RETRO SYNTHWAVE CHASE VIEW)
+  // Back window displays live audio details: spectrum, waveform, telemetry
   // =========================================================================
   private renderCarBackseat(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    data: AudioVisualData,
+    isPlaying: boolean,
+    seedText: string
+  ) {
+    this.renderCarOnStreet(ctx, width, height, data, isPlaying, seedText);
+  }
+
+  private renderCarOnStreet(
     ctx: CanvasRenderingContext2D,
     width: number,
     height: number,
@@ -433,36 +447,25 @@ export class WMPVisualizer {
     const cx = width * 0.5;
 
     // Road speed & motion
-    const roadSpeed = isPlaying ? 0.014 + (this.smoothedBass * 0.018) : 0.005;
+    const roadSpeed = isPlaying ? 0.016 + (this.smoothedBass * 0.022) : 0.006;
     this.roadOffset = (this.roadOffset + roadSpeed) % 1;
 
-    // Car suspension bump & subtle chassis sway
-    const carSway = Math.sin(this.timeTick * 0.75) * (width * 0.008);
-    const carBump = Math.sin(this.timeTick * 12) * 0.8 + (isPlaying ? (this.smoothedBass * 2.5) : 0);
+    // Car suspension bump, gentle lane cruising sway, and chassis roll banking
+    const carSway = Math.sin(this.timeTick * 0.7) * (width * 0.016);
+    const carBump = (isPlaying ? this.smoothedBass * 3.8 : 0) + Math.sin(this.timeTick * 16) * 0.75;
+    const carRoll = (carSway / (width * 0.016 || 1)) * 0.014;
 
-    // 1. Neon Highway road lanes on top of ground grid
-    this.renderHighwayRoad(ctx, width, height, horizonY, cx, isPlaying);
+    // 1. Street Asphalt Road with Neon Borders, Rushing Lane Dividers & Roadside Light Posts
+    this.renderStreetRoad(ctx, width, height, horizonY, cx, isPlaying);
 
-    // 2. Windshield glass reflection & sliding raindrops
-    this.renderWindshieldGlass(ctx, width, height, horizonY, carSway, isPlaying);
-
-    // 3. Rearview Mirror (Vibrates to deep sub-bass)
-    this.renderRearviewMirror(ctx, width, height, cx + carSway * 0.5, carBump, this.smoothedBass);
-
-    // 4. Front Dashboard & Center Console (Stereo + Equalizer)
-    this.renderCarDashboard(ctx, width, height, cx + carSway, carBump, data, isPlaying, seedText);
-
-    // 5. Driver & Passenger Front Bucket Seats (Backseat View)
-    this.renderFrontBucketSeats(ctx, width, height, carSway, carBump);
-
-    // 6. Car Cabin Pillars & Ceiling Headliner
-    this.renderCarCabinPerimeter(ctx, width, height);
+    // 2. The Car on Street (Exterior Rear View with Back Window Audio Details)
+    this.renderCarExterior(ctx, width, height, cx + carSway, carBump, carRoll, data, isPlaying, seedText);
   }
 
   /**
-   * Helper: Render Highway Asphalt & Rushing Neon Dividers
+   * Helper: Render Highway Street with Rushing Dividers and Roadside Light Poles
    */
-  private renderHighwayRoad(
+  private renderStreetRoad(
     ctx: CanvasRenderingContext2D,
     width: number,
     height: number,
@@ -470,11 +473,12 @@ export class WMPVisualizer {
     cx: number,
     isPlaying: boolean
   ) {
-    const roadTopW = width * 0.09;
-    const roadBottomW = width * 0.88;
+    const roadTopW = width * 0.11;
+    const roadBottomW = width * 0.94;
 
     ctx.save();
-    // Asphalt road surface
+
+    // 1. Asphalt Road Surface
     ctx.beginPath();
     ctx.moveTo(cx - roadTopW * 0.5, horizonY);
     ctx.lineTo(cx + roadTopW * 0.5, horizonY);
@@ -483,17 +487,17 @@ export class WMPVisualizer {
     ctx.closePath();
 
     const roadGrad = ctx.createLinearGradient(0, horizonY, 0, height);
-    roadGrad.addColorStop(0, '#0a0314');
-    roadGrad.addColorStop(0.5, '#120622');
-    roadGrad.addColorStop(1, '#1a0730');
+    roadGrad.addColorStop(0, '#090214');
+    roadGrad.addColorStop(0.4, '#100520');
+    roadGrad.addColorStop(1, '#180730');
     ctx.fillStyle = roadGrad;
     ctx.fill();
 
-    // Road Outer Shoulder Lines (Neon Pink on Left, Neon Cyan on Right)
+    // 2. Neon Road Shoulder Guardrails (Left: Hot Magenta, Right: Cyan)
     ctx.lineWidth = 2.2;
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 12;
 
-    // Left Shoulder Line
+    // Left Shoulder
     ctx.strokeStyle = '#ff007f';
     ctx.shadowColor = '#ff007f';
     ctx.beginPath();
@@ -501,7 +505,7 @@ export class WMPVisualizer {
     ctx.lineTo(cx - roadBottomW * 0.5, height);
     ctx.stroke();
 
-    // Right Shoulder Line
+    // Right Shoulder
     ctx.strokeStyle = '#00f0ff';
     ctx.shadowColor = '#00f0ff';
     ctx.beginPath();
@@ -509,396 +513,630 @@ export class WMPVisualizer {
     ctx.lineTo(cx + roadBottomW * 0.5, height);
     ctx.stroke();
 
-    // Center Dashed Highway Stripes Racing Forward
-    const stripeCount = 10;
-    ctx.fillStyle = '#ffb703'; // Neon Gold/Amber Divider
-    ctx.shadowColor = '#ffb703';
-    ctx.shadowBlur = 8;
+    // 3. Road Lane Dividers (Multi-lane highway)
+    const leftTopX = cx - roadTopW * 0.22;
+    const leftBottomX = cx - roadBottomW * 0.22;
+    const rightTopX = cx + roadTopW * 0.22;
+    const rightBottomX = cx + roadBottomW * 0.22;
 
+    const stripeCount = 11;
     for (let i = 0; i < stripeCount; i++) {
       const t = (i + this.roadOffset) / stripeCount;
       const stripeY = horizonY + Math.pow(t, 2.5) * (height - horizonY);
-      const stripeH = 3 + Math.pow(t, 2.2) * 38;
-      const stripeW = 2 + t * 6;
+      const stripeH = 3 + Math.pow(t, 2.2) * 36;
 
-      ctx.fillRect(cx - stripeW * 0.5, stripeY, stripeW, stripeH);
-    }
+      // Center Amber Dashes
+      const centerW = 2 + t * 6;
+      ctx.fillStyle = '#ffb703';
+      ctx.shadowColor = '#ffb703';
+      ctx.shadowBlur = 8;
+      ctx.fillRect(cx - centerW * 0.5, stripeY, centerW, stripeH);
 
-    ctx.restore();
-  }
+      // Left & Right Lane Dashes (Cyan / Magenta tinted)
+      const subW = 1.2 + t * 3.5;
+      const subXLeft = leftTopX + t * (leftBottomX - leftTopX);
+      const subXRight = rightTopX + t * (rightBottomX - rightTopX);
 
-  /**
-   * Helper: Windshield Glass Reflections & Raindrops
-   */
-  private renderWindshieldGlass(
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number,
-    horizonY: number,
-    carSway: number,
-    isPlaying: boolean
-  ) {
-    ctx.save();
-
-    // Soft diagonal glass reflection glare
-    const glassGrad = ctx.createLinearGradient(width * 0.15, 0, width * 0.85, height * 0.7);
-    glassGrad.addColorStop(0, 'rgba(0, 240, 255, 0.04)');
-    glassGrad.addColorStop(0.4, 'transparent');
-    glassGrad.addColorStop(0.7, 'rgba(255, 0, 127, 0.03)');
-    glassGrad.addColorStop(1, 'transparent');
-    ctx.fillStyle = glassGrad;
-    ctx.fillRect(0, 0, width, horizonY + height * 0.2);
-
-    // Sliding Raindrops on the Windshield
-    for (const drop of this.raindrops) {
-      drop.y += drop.speed * (isPlaying ? 1.4 : 0.8);
-      if (drop.y > 0.72) {
-        drop.y = 0.12;
-        drop.x = Math.random() * 0.7 + 0.15;
-      }
-
-      const dx = (drop.x * width) + carSway * 0.5;
-      const dy = drop.y * height;
-
-      // Drop streak
-      ctx.strokeStyle = `rgba(0, 240, 255, ${drop.alpha * 0.6})`;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(dx, dy - drop.length);
-      ctx.lineTo(dx, dy);
-      ctx.stroke();
-
-      // Drop head
-      ctx.beginPath();
-      ctx.arc(dx, dy, 1.6, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255, 255, 255, ${drop.alpha})`;
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.45)';
       ctx.shadowColor = '#00f0ff';
       ctx.shadowBlur = 4;
-      ctx.fill();
+      ctx.fillRect(subXLeft - subW * 0.5, stripeY, subW, stripeH * 0.7);
+
+      ctx.fillStyle = 'rgba(255, 0, 127, 0.45)';
+      ctx.shadowColor = '#ff007f';
+      ctx.shadowBlur = 4;
+      ctx.fillRect(subXRight - subW * 0.5, stripeY, subW, stripeH * 0.7);
+    }
+
+    // 4. Roadside Neon Street Poles Rushing Past
+    const polePairs = 6;
+    for (let p = 0; p < polePairs; p++) {
+      const t = (p / polePairs + this.roadOffset) % 1;
+      const py = horizonY + Math.pow(t, 2.7) * (height - horizonY);
+      const poleH = 10 + Math.pow(t, 2.3) * 70;
+      const poleLeftX = (cx - roadTopW * 0.5) + t * ((-roadBottomW * 0.5 + roadTopW * 0.5)) - 14 - (t * 30);
+      const poleRightX = (cx + roadTopW * 0.5) + t * ((roadBottomW * 0.5 - roadTopW * 0.5)) + 14 + (t * 30);
+      const alpha = Math.pow(t, 1.4);
+
+      // Left Pole (Hot Pink light)
+      ctx.strokeStyle = `rgba(255, 0, 127, ${alpha * 0.85})`;
+      ctx.lineWidth = 1.5 + t * 2;
+      ctx.shadowColor = '#ff007f';
+      ctx.shadowBlur = 6 + t * 8;
+      ctx.beginPath();
+      ctx.moveTo(poleLeftX, py);
+      ctx.lineTo(poleLeftX, py - poleH);
+      ctx.stroke();
+
+      // Right Pole (Neon Cyan light)
+      ctx.strokeStyle = `rgba(0, 240, 255, ${alpha * 0.85})`;
+      ctx.lineWidth = 1.5 + t * 2;
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 6 + t * 8;
+      ctx.beginPath();
+      ctx.moveTo(poleRightX, py);
+      ctx.lineTo(poleRightX, py - poleH);
+      ctx.stroke();
     }
 
     ctx.restore();
   }
 
   /**
-   * Helper: Hanging Rearview Mirror (Vibrates to Sub-Bass)
+   * Helper: Render the Retro Synthwave Sports Car (Exterior Rear View)
    */
-  private renderRearviewMirror(
+  private renderCarExterior(
     ctx: CanvasRenderingContext2D,
     width: number,
     height: number,
-    x: number,
+    carX: number,
     carBump: number,
-    bass: number
-  ) {
-    ctx.save();
-    const jitter = (Math.random() - 0.5) * bass * 2.2;
-    const my = height * 0.13 + carBump + jitter;
-    const mw = Math.min(width * 0.22, 120);
-    const mh = mw * 0.28;
-
-    // Slender mount from ceiling
-    ctx.strokeStyle = '#2d1844';
-    ctx.lineWidth = 3.5;
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, my);
-    ctx.stroke();
-
-    // Mirror Beveled Housing
-    this.roundRect(ctx, x - mw * 0.5, my, mw, mh, 7);
-    ctx.fillStyle = '#0f051c';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-    ctx.shadowBlur = 14;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-
-    // Mirror Glass Surface
-    this.roundRect(ctx, x - mw * 0.5 + 2.5, my + 2.5, mw - 5, mh - 5, 5);
-    const mirrorGrad = ctx.createLinearGradient(x - mw * 0.5, my, x + mw * 0.5, my + mh);
-    mirrorGrad.addColorStop(0, '#1a0730');
-    mirrorGrad.addColorStop(0.5, '#0c0418');
-    mirrorGrad.addColorStop(1, '#220840');
-    ctx.fillStyle = mirrorGrad;
-    ctx.fill();
-
-    // Mirror glare streak
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x - mw * 0.35, my + mh - 4);
-    ctx.lineTo(x + mw * 0.35, my + 4);
-    ctx.stroke();
-
-    ctx.restore();
-  }
-
-  /**
-   * Helper: Front Dashboard & Center Console with Stereo & Equalizer
-   */
-  private renderCarDashboard(
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number,
-    cx: number,
-    carBump: number,
+    carRoll: number,
     data: AudioVisualData,
     isPlaying: boolean,
     seedText: string
   ) {
-    ctx.save();
-    const dashY = height * 0.68 + carBump;
-    const consoleW = Math.min(width * 0.36, 210);
-    const consoleH = height - dashY;
+    const carW = Math.max(290, Math.min(width * 0.44, 430));
+    const carH = carW * 0.53;
+    const carBaseY = Math.min(height * 0.83, height - 72) + carBump;
+    const carTopY = carBaseY - carH;
 
-    // Center Console Body
-    this.roundRect(ctx, cx - consoleW * 0.5, dashY, consoleW, consoleH, 12);
-    ctx.fillStyle = '#0d0418';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-    ctx.shadowBlur = 25;
+    // 1. Neon Underglow on the Asphalt (Under the car)
+    ctx.save();
+    const underglowW = carW * 0.92;
+    const underglowH = carH * 0.35;
+    const underglowGrad = ctx.createRadialGradient(
+      carX, carBaseY + 6, 10,
+      carX, carBaseY + 6, underglowW * 0.5
+    );
+    const underglowPulse = isPlaying ? 0.45 + (this.smoothedBass * 0.4) : 0.25;
+    underglowGrad.addColorStop(0, `rgba(255, 0, 127, ${underglowPulse})`);
+    underglowGrad.addColorStop(0.45, `rgba(0, 240, 255, ${underglowPulse * 0.7})`);
+    underglowGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = underglowGrad;
+    ctx.fillRect(carX - underglowW * 0.5, carBaseY - 10, underglowW, underglowH);
+    ctx.restore();
+
+    // Apply Chassis Roll & Tilt
+    ctx.save();
+    ctx.translate(carX, carBaseY);
+    ctx.rotate(carRoll);
+    ctx.translate(-carX, -carBaseY);
+
+    // 2. Wide Low-Profile Rear Sports Tires & Ground Shadows
+    const tireW = carW * 0.14;
+    const tireH = carH * 0.32;
+    const tireY = carBaseY - tireH * 0.75;
+    const leftTireX = carX - carW * 0.43;
+    const rightTireX = carX + carW * 0.29;
+
+    // Left Tire
+    this.roundRect(ctx, leftTireX, tireY, tireW, tireH, 6);
+    ctx.fillStyle = '#06020c';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+    ctx.strokeStyle = '#1d0c36';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Right Tire
+    this.roundRect(ctx, rightTireX, tireY, tireW, tireH, 6);
+    ctx.fillStyle = '#06020c';
+    ctx.fill();
+    ctx.strokeStyle = '#1d0c36';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 3. Dual Exhaust Tips with Reactive Flame Jets & Nitro Sparks
+    this.renderCarExhausts(ctx, carX, carBaseY, carW, carH, isPlaying);
+
+    // 4. Rear Diffuser & Bumper
+    const bumperY = carTopY + carH * 0.65;
+    const bumperH = carBaseY - bumperY;
+    const bumperW = carW * 0.88;
+
+    // Bumper Body
+    this.roundRect(ctx, carX - bumperW * 0.5, bumperY, bumperW, bumperH, 10);
+    const bumperGrad = ctx.createLinearGradient(carX, bumperY, carX, carBaseY);
+    bumperGrad.addColorStop(0, '#100522');
+    bumperGrad.addColorStop(0.5, '#190835');
+    bumperGrad.addColorStop(1, '#0c031a');
+    ctx.fillStyle = bumperGrad;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 18;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    // Diffuser Vertical Fins (Aerodynamic strakes)
+    const finCount = 4;
+    const finAreaW = carW * 0.34;
+    const finStartX = carX - finAreaW * 0.5;
+    const finStep = finAreaW / (finCount - 1);
+    ctx.strokeStyle = '#00f0ff';
+    ctx.lineWidth = 1.2;
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 6;
+    for (let f = 0; f < finCount; f++) {
+      const fx = finStartX + f * finStep;
+      ctx.beginPath();
+      ctx.moveTo(fx, carBaseY - bumperH * 0.45);
+      ctx.lineTo(fx, carBaseY - 3);
+      ctx.stroke();
+    }
+
+    // 5. Illuminated Vanity License Plate
+    const plateW = carW * 0.28;
+    const plateH = bumperH * 0.46;
+    const plateX = carX - plateW * 0.5;
+    const plateY = bumperY + bumperH * 0.12;
+
+    this.roundRect(ctx, plateX, plateY, plateW, plateH, 5);
+    ctx.fillStyle = '#05010b';
+    ctx.fill();
+    ctx.strokeStyle = '#ff007f';
+    ctx.lineWidth = 1.2;
+    ctx.shadowColor = '#ff007f';
+    ctx.shadowBlur = 6;
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffb703';
+    ctx.shadowColor = '#ffb703';
+    ctx.shadowBlur = 5;
+    ctx.font = `700 ${Math.max(8, plateW * 0.16)}px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('LO-FI 808', carX, plateY + plateH * 0.45);
+
+    ctx.font = `600 ${Math.max(6, plateW * 0.09)}px 'JetBrains Mono', monospace`;
+    ctx.fillStyle = '#00f0ff';
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 3;
+    ctx.fillText('NIGHT CRUISE', carX, plateY + plateH * 0.8);
+
+    // 6. Full-Width Synthwave Taillight Bar (80s Neon Array)
+    const tailY = carTopY + carH * 0.52;
+    const tailH = carH * 0.13;
+    const tailW = carW * 0.84;
+    const tailX = carX - tailW * 0.5;
+
+    // Taillight Housing Frame
+    this.roundRect(ctx, tailX, tailY, tailW, tailH, 6);
+    ctx.fillStyle = '#07020e';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 0, 127, 0.4)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Glowing Neon Taillight Bar
+    const lightInnerH = tailH * 0.65;
+    const lightInnerY = tailY + (tailH - lightInnerH) * 0.5;
+    const lightInnerW = tailW - 8;
+    const lightInnerX = tailX + 4;
+
+    const tailGlow = isPlaying ? 10 + (this.smoothedBass * 18) : 8;
+    ctx.save();
+    this.roundRect(ctx, lightInnerX, lightInnerY, lightInnerW, lightInnerH, 4);
+    const tailGrad = ctx.createLinearGradient(tailX, 0, tailX + tailW, 0);
+    tailGrad.addColorStop(0, '#ff9900');   // Left amber indicator
+    tailGrad.addColorStop(0.08, '#ff0055');
+    tailGrad.addColorStop(0.5, '#ff007f'); // Hot pink center
+    tailGrad.addColorStop(0.92, '#ff0055');
+    tailGrad.addColorStop(1, '#ff9900');   // Right amber indicator
+    ctx.fillStyle = tailGrad;
+    ctx.shadowColor = '#ff007f';
+    ctx.shadowBlur = tailGlow;
+    ctx.fill();
+
+    // Grid segmented taillight lines
+    ctx.strokeStyle = 'rgba(10, 2, 18, 0.7)';
+    ctx.lineWidth = 1.2;
+    ctx.shadowBlur = 0;
+    const segCount = 18;
+    const segW = lightInnerW / segCount;
+    for (let s = 1; s < segCount; s++) {
+      ctx.beginPath();
+      ctx.moveTo(lightInnerX + s * segW, lightInnerY);
+      ctx.lineTo(lightInnerX + s * segW, lightInnerY + lightInnerH);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 7. Fastback Rear Deck & Aerodynamic Wing / Spoiler
+    this.renderCarSpoiler(ctx, carX, carTopY, carW, carH);
+
+    // 8. Fastback Cabin Silhouette / C-Pillars
+    const roofW = carW * 0.58;
+    const roofTopY = carTopY + carH * 0.04;
+    const shoulderW = carW * 0.78;
+    const shoulderY = carTopY + carH * 0.52;
+
+    ctx.beginPath();
+    ctx.moveTo(carX - roofW * 0.5, roofTopY);
+    ctx.lineTo(carX + roofW * 0.5, roofTopY);
+    ctx.lineTo(carX + shoulderW * 0.5, shoulderY);
+    ctx.lineTo(carX - shoulderW * 0.5, shoulderY);
+    ctx.closePath();
+
+    const cabinGrad = ctx.createLinearGradient(carX, roofTopY, carX, shoulderY);
+    cabinGrad.addColorStop(0, '#0d041c');
+    cabinGrad.addColorStop(0.5, '#160730');
+    cabinGrad.addColorStop(1, '#0e041e');
+    ctx.fillStyle = cabinGrad;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.3)';
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // Digital Stereo Head Unit Display
-    const stereoW = consoleW * 0.86;
-    const stereoH = Math.min(consoleH * 0.26, 46);
-    const sx = cx - stereoW * 0.5;
-    const sy = dashY + 14;
+    // 9. THE CAR'S BACK WINDOW SHOWING AUDIO DETAILS
+    this.renderCarBackWindow(ctx, carX, carTopY, carW, carH, data, isPlaying, seedText);
 
-    this.roundRect(ctx, sx, sy, stereoW, stereoH, 6);
-    ctx.fillStyle = '#05020a';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
-    ctx.lineWidth = 1;
+    ctx.restore();
+  }
+
+  /**
+   * Helper: Aerodynamic Rear Sports Wing / Spoiler
+   */
+  private renderCarSpoiler(
+    ctx: CanvasRenderingContext2D,
+    carX: number,
+    carTopY: number,
+    carW: number,
+    carH: number
+  ) {
+    const wingY = carTopY + carH * 0.44;
+    const wingW = carW * 0.84;
+    const wingH = carH * 0.055;
+    const strutLeftX = carX - carW * 0.28;
+    const strutRightX = carX + carW * 0.28;
+    const strutBottomY = carTopY + carH * 0.52;
+
+    ctx.save();
+    // Struts / Pylons
+    ctx.strokeStyle = '#2d1052';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(strutLeftX, strutBottomY);
+    ctx.lineTo(strutLeftX, wingY + wingH);
+    ctx.moveTo(strutRightX, strutBottomY);
+    ctx.lineTo(strutRightX, wingY + wingH);
     ctx.stroke();
 
-    // VFD / Digital Display Text
-    const cleanSeed = seedText.toUpperCase().slice(0, 14);
-    ctx.fillStyle = '#00f0ff';
+    // Wing Blade
+    this.roundRect(ctx, carX - wingW * 0.5, wingY, wingW, wingH, 3);
+    ctx.fillStyle = '#100524';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 10;
+    ctx.fill();
+    ctx.strokeStyle = '#00f0ff';
+    ctx.lineWidth = 1.2;
     ctx.shadowColor = '#00f0ff';
     ctx.shadowBlur = 6;
-    ctx.font = `700 ${Math.max(9, stereoW * 0.06)}px 'JetBrains Mono', monospace`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`► FM • ${cleanSeed}`, cx, sy + stereoH * 0.38);
+    ctx.stroke();
 
-    // Clock & Volume Indicator
+    // Wing Endplates
+    const endplateH = wingH * 2.6;
+    const endplateW = 4;
+    this.roundRect(ctx, carX - wingW * 0.5 - 2, wingY - wingH * 0.8, endplateW, endplateH, 2);
     ctx.fillStyle = '#ff007f';
-    ctx.font = `600 ${Math.max(7, stereoW * 0.045)}px 'JetBrains Mono', monospace`;
     ctx.shadowColor = '#ff007f';
-    ctx.shadowBlur = 4;
-    ctx.fillText('11:42 PM • STEREO [DOLBY]', cx, sy + stereoH * 0.75);
+    ctx.shadowBlur = 6;
+    ctx.fill();
 
-    // 5-Band Graphic Equalizer on the Dash
-    const eqY = sy + stereoH + 10;
-    const eqW = stereoW * 0.88;
-    const eqX = cx - eqW * 0.5;
-    const barW = eqW / 6;
+    this.roundRect(ctx, carX + wingW * 0.5 - 2, wingY - wingH * 0.8, endplateW, endplateH, 2);
+    ctx.fill();
 
-    ctx.shadowBlur = 4;
-    for (let b = 0; b < 5; b++) {
-      const freqVal = isPlaying && data.frequency ? (data.frequency[b * 16] || 0) / 255 : 0.08;
-      const numSegments = Math.max(1, Math.round(freqVal * 5));
-      const bx = eqX + b * (barW + 3);
+    ctx.restore();
+  }
 
-      for (let s = 0; s < numSegments; s++) {
-        const segY = eqY + 22 - (s * 5);
-        const segColor = (s >= 4) ? '#ff007f' : (s >= 2) ? '#ff9900' : '#00f0ff';
-        ctx.fillStyle = segColor;
-        ctx.shadowColor = segColor;
-        ctx.fillRect(bx, segY, barW - 2, 3.5);
-      }
-    }
+  /**
+   * Helper: Sports Exhausts with Reactive Nitro Flame Jets & Sparks
+   */
+  private renderCarExhausts(
+    ctx: CanvasRenderingContext2D,
+    carX: number,
+    carBaseY: number,
+    carW: number,
+    carH: number,
+    isPlaying: boolean
+  ) {
+    const exhaustY = carBaseY - carH * 0.05;
+    const leftExhaustX = carX - carW * 0.32;
+    const rightExhaustX = carX + carW * 0.32;
+    const pipeRadius = carW * 0.035;
 
-    // Driver Instrument Pod (Speedometer on Left Dashboard)
-    const gaugeR = 24;
-    const gaugeX = cx - consoleW * 0.72;
-    const gaugeY = dashY + 34;
+    ctx.save();
 
-    if (gaugeX - gaugeR > 0) {
+    // Render metal exhaust pipe rims
+    const renderPipe = (px: number) => {
       ctx.beginPath();
-      ctx.arc(gaugeX, gaugeY, gaugeR, 0, Math.PI * 2);
+      ctx.arc(px, exhaustY, pipeRadius, 0, Math.PI * 2);
       ctx.fillStyle = '#06020c';
       ctx.fill();
       ctx.strokeStyle = '#00f0ff';
-      ctx.lineWidth = 1.2;
+      ctx.lineWidth = 2.0;
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 6;
       ctx.stroke();
 
-      // Speedometer Needle (points around 80 MPH)
-      const needleAngle = -Math.PI * 0.3 + (isPlaying ? this.smoothedBass * 0.4 : 0);
-      ctx.save();
-      ctx.translate(gaugeX, gaugeY);
-      ctx.rotate(needleAngle);
-      ctx.strokeStyle = '#ff007f';
-      ctx.lineWidth = 1.8;
-      ctx.shadowColor = '#ff007f';
-      ctx.shadowBlur = 6;
+      // Inner bore
       ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(0, -gaugeR * 0.85);
+      ctx.arc(px, exhaustY, pipeRadius * 0.6, 0, Math.PI * 2);
+      ctx.fillStyle = '#000000';
+      ctx.fill();
+    };
+
+    renderPipe(leftExhaustX);
+    renderPipe(rightExhaustX);
+
+    // Reactive Flame Jets when playing music
+    if (isPlaying && this.smoothedBass > 0.15) {
+      const flameLen = 8 + this.smoothedBass * 28;
+      const flameW = pipeRadius * (0.9 + this.smoothedBass * 0.6);
+
+      const drawFlame = (fx: number) => {
+        const flameGrad = ctx.createLinearGradient(fx, exhaustY, fx, exhaustY + flameLen);
+        flameGrad.addColorStop(0, '#ffffff');
+        flameGrad.addColorStop(0.2, '#00f0ff');
+        flameGrad.addColorStop(0.65, '#ff007f');
+        flameGrad.addColorStop(1, 'transparent');
+
+        ctx.beginPath();
+        ctx.moveTo(fx - flameW * 0.5, exhaustY);
+        ctx.quadraticCurveTo(fx - flameW * 0.2, exhaustY + flameLen * 0.6, fx, exhaustY + flameLen);
+        ctx.quadraticCurveTo(fx + flameW * 0.2, exhaustY + flameLen * 0.6, fx + flameW * 0.5, exhaustY);
+        ctx.closePath();
+
+        ctx.fillStyle = flameGrad;
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 12;
+        ctx.fill();
+      };
+
+      drawFlame(leftExhaustX);
+      drawFlame(rightExhaustX);
+
+      // Spawn occasional nitro sparks
+      if (Math.random() < 0.5) {
+        const spawnX = (Math.random() < 0.5 ? leftExhaustX : rightExhaustX) + (Math.random() - 0.5) * 6;
+        this.nitroSparks.push({
+          x: spawnX,
+          y: exhaustY + 4,
+          vx: (Math.random() - 0.5) * 1.5,
+          vy: Math.random() * 2.5 + 1.2,
+          life: 18,
+          maxLife: 18,
+          color: Math.random() < 0.5 ? '#00f0ff' : '#ff007f'
+        });
+      }
+    }
+
+    // Update & draw nitro sparks
+    for (let i = this.nitroSparks.length - 1; i >= 0; i--) {
+      const sp = this.nitroSparks[i];
+      sp.x += sp.vx;
+      sp.y += sp.vy;
+      sp.life--;
+      if (sp.life <= 0) {
+        this.nitroSparks.splice(i, 1);
+        continue;
+      }
+      const alpha = sp.life / sp.maxLife;
+      ctx.fillStyle = sp.color;
+      ctx.globalAlpha = alpha;
+      ctx.shadowColor = sp.color;
+      ctx.shadowBlur = 6;
+      ctx.fillRect(sp.x, sp.y, 2, 2);
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Helper: The Car's Back Window Displaying Live Audio Details (Spectrum, Waveform, Telemetry)
+   */
+  private renderCarBackWindow(
+    ctx: CanvasRenderingContext2D,
+    carX: number,
+    carTopY: number,
+    carW: number,
+    carH: number,
+    data: AudioVisualData,
+    isPlaying: boolean,
+    seedText: string
+  ) {
+    const winTopY = carTopY + carH * 0.08;
+    const winBottomY = carTopY + carH * 0.46;
+    const winH = winBottomY - winTopY;
+    const winTopW = carW * 0.52;
+    const winBottomW = carW * 0.68;
+
+    ctx.save();
+
+    // 1. Back Window Glass Contour (Fastback Trapezoid)
+    ctx.beginPath();
+    ctx.moveTo(carX - winTopW * 0.5, winTopY);
+    ctx.lineTo(carX + winTopW * 0.5, winTopY);
+    ctx.lineTo(carX + winBottomW * 0.5, winBottomY);
+    ctx.lineTo(carX - winBottomW * 0.5, winBottomY);
+    ctx.closePath();
+
+    // Glass Background Fill
+    const glassGrad = ctx.createLinearGradient(carX, winTopY, carX, winBottomY);
+    glassGrad.addColorStop(0, 'rgba(8, 2, 20, 0.95)');
+    glassGrad.addColorStop(0.5, 'rgba(15, 4, 30, 0.93)');
+    glassGrad.addColorStop(1, 'rgba(6, 1, 16, 0.97)');
+    ctx.fillStyle = glassGrad;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+    ctx.shadowBlur = 14;
+    ctx.fill();
+
+    // Glowing Neon Glass Bezel
+    ctx.strokeStyle = '#00f0ff';
+    ctx.lineWidth = 1.8;
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 10;
+    ctx.stroke();
+
+    // Clip to Back Window Glass Surface so all audio details stay neatly inside the window
+    ctx.clip();
+
+    // 2. Horizontal Defroster Wire Grid Lines
+    ctx.strokeStyle = 'rgba(255, 0, 127, 0.22)';
+    ctx.lineWidth = 1.0;
+    ctx.shadowBlur = 0;
+    const wireCount = 4;
+    for (let w = 1; w <= wireCount; w++) {
+      const wy = winTopY + (w / (wireCount + 1)) * winH;
+      ctx.beginPath();
+      ctx.moveTo(carX - winBottomW * 0.5, wy);
+      ctx.lineTo(carX + winBottomW * 0.5, wy);
+      ctx.stroke();
+    }
+
+    // 3. Audio Details Header: Seed Title & Live Indicator
+    const cleanSeed = seedText.toUpperCase().slice(0, 16);
+    const headerY = winTopY + 13;
+
+    // Pulse Live / Paused Dot
+    const dotX = carX - winTopW * 0.42;
+    ctx.beginPath();
+    ctx.arc(dotX, headerY, 3, 0, Math.PI * 2);
+    if (isPlaying) {
+      ctx.fillStyle = '#00ffaa';
+      ctx.shadowColor = '#00ffaa';
+      ctx.shadowBlur = 6;
+    } else {
+      ctx.fillStyle = '#ffb703';
+      ctx.shadowColor = '#ffb703';
+      ctx.shadowBlur = 4;
+    }
+    ctx.fill();
+
+    // Status & Seed Text
+    ctx.font = `700 ${Math.max(8, winTopW * 0.055)}px 'JetBrains Mono', monospace`;
+    ctx.fillStyle = '#00f0ff';
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 6;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(isPlaying ? 'LIVE AUDIO' : 'PAUSED', dotX + 8, headerY);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ff007f';
+    ctx.shadowColor = '#ff007f';
+    ctx.shadowBlur = 5;
+    ctx.fillText(`♫ ${cleanSeed}`, carX + winTopW * 0.44, headerY);
+
+    // 4. Live Audio Spectrum Equalizer (FFT Frequency Columns)
+    const eqAreaY = winTopY + 24;
+    const eqAreaH = winH * 0.44;
+    const numBars = 20;
+    const eqW = winBottomW * 0.84;
+    const barSpacing = eqW / numBars;
+    const barW = Math.max(2, barSpacing - 2.5);
+    const eqStartX = carX - eqW * 0.5;
+
+    for (let b = 0; b < numBars; b++) {
+      // Perceptual frequency bin mapping (more weighting on bass and mids)
+      const binIdx = Math.floor(Math.pow(b / numBars, 1.6) * 120);
+      let rawVal = 0.06;
+      if (isPlaying && data.frequency && data.frequency.length > binIdx) {
+        rawVal = Math.max(0.06, data.frequency[binIdx] / 255);
+      }
+      // Add bass boost on lowest 4 bars
+      if (b < 4 && isPlaying) {
+        rawVal = Math.min(1.0, rawVal * 1.25 + this.smoothedBass * 0.25);
+      }
+
+      // Update peak hold
+      if (rawVal >= (this.carEqPeaks[b] || 0)) {
+        this.carEqPeaks[b] = rawVal;
+      } else {
+        this.carEqPeaks[b] = Math.max(0.04, (this.carEqPeaks[b] || 0) - 0.022);
+      }
+
+      const barH = rawVal * eqAreaH;
+      const bx = eqStartX + b * barSpacing;
+      const by = eqAreaY + eqAreaH - barH;
+
+      // Vertical Bar Gradient (Cyan -> Gold -> Hot Magenta)
+      const barGrad = ctx.createLinearGradient(bx, eqAreaY + eqAreaH, bx, by);
+      barGrad.addColorStop(0, '#00f0ff');
+      barGrad.addColorStop(0.5, '#ffb703');
+      barGrad.addColorStop(1, '#ff007f');
+
+      ctx.fillStyle = barGrad;
+      ctx.shadowColor = (rawVal > 0.6) ? '#ff007f' : '#00f0ff';
+      ctx.shadowBlur = 4;
+      ctx.fillRect(bx, by, barW, barH);
+
+      // Peak Hold Cap
+      const peakY = eqAreaY + eqAreaH - (this.carEqPeaks[b] * eqAreaH);
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 4;
+      ctx.fillRect(bx, Math.max(eqAreaY, peakY - 1.5), barW, 1.5);
+    }
+
+    // 5. Live Oscilloscope Waveform Line
+    if (data.waveform && data.waveform.length > 0) {
+      const waveMidY = eqAreaY + eqAreaH + 9;
+      const waveW = winBottomW * 0.84;
+      const waveStartX = carX - waveW * 0.5;
+      const waveStep = data.waveform.length / 50;
+
+      ctx.save();
+      ctx.beginPath();
+      for (let i = 0; i < 50; i++) {
+        const sampleIdx = Math.floor(i * waveStep);
+        const amp = isPlaying ? (data.waveform[sampleIdx] || 0) : 0;
+        const wx = waveStartX + (i / 49) * waveW;
+        const wy = waveMidY + amp * 9;
+        if (i === 0) ctx.moveTo(wx, wy);
+        else ctx.lineTo(wx, wy);
+      }
+      ctx.strokeStyle = 'rgba(0, 255, 200, 0.8)';
+      ctx.lineWidth = 1.2;
+      ctx.shadowColor = '#00ffc8';
+      ctx.shadowBlur = 4;
       ctx.stroke();
       ctx.restore();
     }
 
-    ctx.restore();
-  }
+    // 6. Audio Telemetry Readouts (Bottom of back window)
+    const telemY = winBottomY - 8;
+    const bassPct = (this.smoothedBass * 100).toFixed(0);
+    const midsPct = (this.smoothedMids * 100).toFixed(0);
+    const trebPct = (this.smoothedTreble * 100).toFixed(0);
 
-  /**
-   * Helper: Driver & Passenger Front Sport Bucket Seats (Backseat View)
-   */
-  private renderFrontBucketSeats(
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number,
-    carSway: number,
-    carBump: number
-  ) {
-    const seatW = Math.max(width * 0.27, 160);
-    const seatH = height * 0.62;
-    const seatY = height * 0.44 + carBump;
-
-    // Left Front Seat (Driver)
-    const leftX = width * 0.03 + carSway;
-    this.renderSingleBucketSeat(ctx, leftX, seatY, seatW, seatH, '#00f0ff', true);
-
-    // Right Front Seat (Passenger)
-    const rightX = width - seatW - (width * 0.03) + carSway;
-    this.renderSingleBucketSeat(ctx, rightX, seatY, seatW, seatH, '#ff007f', false);
-  }
-
-  /**
-   * Helper: Render Single Sport Bucket Seat Contour
-   */
-  private renderSingleBucketSeat(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    rimColor: string,
-    isLeft: boolean
-  ) {
-    ctx.save();
-
-    // Headrest
-    const headW = w * 0.42;
-    const headH = h * 0.22;
-    const headX = x + w * 0.5 - headW * 0.5;
-    const headY = y - headH * 0.55;
-
-    // Chrome Headrest Posts
-    ctx.strokeStyle = '#9ca3af';
-    ctx.lineWidth = 3.5;
-    ctx.beginPath();
-    ctx.moveTo(headX + headW * 0.28, headY + headH * 0.5);
-    ctx.lineTo(headX + headW * 0.28, y + 10);
-    ctx.moveTo(headX + headW * 0.72, headY + headH * 0.5);
-    ctx.lineTo(headX + headW * 0.72, y + 10);
-    ctx.stroke();
-
-    // Headrest Cushion
-    this.roundRect(ctx, headX, headY, headW, headH, 12);
-    ctx.fillStyle = '#0c0418';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-    ctx.shadowBlur = 18;
-    ctx.fill();
-
-    // Headrest Rim Glow
-    ctx.strokeStyle = rimColor;
-    ctx.lineWidth = 1.4;
-    ctx.shadowColor = rimColor;
-    ctx.shadowBlur = 8;
-    ctx.stroke();
-
-    // Main Seat Backrest with Bolsters
-    ctx.beginPath();
-    // Shoulder contour curve
-    ctx.moveTo(x, y + h);
-    ctx.lineTo(x, y + h * 0.35);
-    ctx.bezierCurveTo(
-      x - 10, y + h * 0.15,
-      x + w * 0.2, y,
-      x + w * 0.5, y
-    );
-    ctx.bezierCurveTo(
-      x + w * 0.8, y,
-      x + w + 10, y + h * 0.15,
-      x + w, y + h * 0.35
-    );
-    ctx.lineTo(x + w, y + h);
-    ctx.closePath();
-
-    ctx.fillStyle = '#0d051a'; // Deep obsidian-velour
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-    ctx.shadowBlur = 24;
-    ctx.fill();
-
-    // Seat Bolster Seam Highlight
-    ctx.strokeStyle = rimColor;
-    ctx.lineWidth = 1.6;
-    ctx.shadowColor = rimColor;
-    ctx.shadowBlur = 8;
-    ctx.stroke();
-
-    // Center Vertical Inset Stitching
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-    ctx.lineWidth = 1;
-    ctx.shadowBlur = 0;
-    ctx.beginPath();
-    ctx.moveTo(x + w * 0.35, y + h * 0.15);
-    ctx.lineTo(x + w * 0.35, y + h);
-    ctx.moveTo(x + w * 0.65, y + h * 0.15);
-    ctx.lineTo(x + w * 0.65, y + h);
-    ctx.stroke();
-
-    ctx.restore();
-  }
-
-  /**
-   * Helper: Car Cabin Roof & Side Window Pillars
-   */
-  private renderCarCabinPerimeter(ctx: CanvasRenderingContext2D, width: number, height: number) {
-    ctx.save();
-
-    // Top Headliner (Ceiling)
-    const roofH = height * 0.07;
-    ctx.fillStyle = '#090312';
-    ctx.fillRect(0, 0, width, roofH);
-
-    // Ceiling Bevel & Ambient Dome Light Glow
-    const domeGlow = ctx.createRadialGradient(width * 0.5, 0, 10, width * 0.5, 0, width * 0.4);
-    domeGlow.addColorStop(0, 'rgba(168, 85, 247, 0.25)');
-    domeGlow.addColorStop(1, 'transparent');
-    ctx.fillStyle = domeGlow;
-    ctx.fillRect(0, 0, width, roofH * 2);
-
-    ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(0, roofH);
-    ctx.lineTo(width, roofH);
-    ctx.stroke();
-
-    // Left A-Pillar (Window frame)
-    ctx.fillStyle = '#080210';
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(width * 0.06, 0);
-    ctx.lineTo(0, height * 0.5);
-    ctx.closePath();
-    ctx.fill();
-
-    // Right A-Pillar (Window frame)
-    ctx.beginPath();
-    ctx.moveTo(width, 0);
-    ctx.lineTo(width - width * 0.06, 0);
-    ctx.lineTo(width, height * 0.5);
-    ctx.closePath();
-    ctx.fill();
+    ctx.font = `600 ${Math.max(7, winBottomW * 0.042)}px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#a78bfa';
+    ctx.shadowColor = '#a78bfa';
+    ctx.shadowBlur = 3;
+    ctx.fillText(`BASS ${bassPct}%  •  MIDS ${midsPct}%  •  HI ${trebPct}%  •  ~76 BPM [FM STEREO]`, carX, telemY);
 
     ctx.restore();
   }

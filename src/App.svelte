@@ -154,7 +154,7 @@
 
   function formatModeName(m: VisualizerMode): string {
     switch (m) {
-      case 'car_backseat': return 'Car Backseat';
+      case 'car_backseat': return 'Car on Street';
       case 'vintage_vinyl': return 'Vintage Vinyl';
       case 'cassette_tape': return 'Cassette Tape';
       case 'analog_scope': return 'Analog Scope';

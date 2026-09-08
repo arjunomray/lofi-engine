@@ -45,6 +45,10 @@ export class WMPVisualizer {
   private cassetteReelAngle: number = 0;
   private needleRipples: NeedleRipple[] = [];
 
+  // Synthwave moving 3D grid and starfield
+  private gridOffset: number = 0;
+  private stars: { x: number; y: number; size: number; alpha: number; twinkleSpeed: number }[] = [];
+
   // Synthwave neon dust & starlight particles
   private particles: Particle[] = [];
   private particleCount: number = 55;
@@ -56,6 +60,20 @@ export class WMPVisualizer {
     this.ctx = context;
 
     this.initParticles();
+    this.initStars();
+  }
+
+  private initStars() {
+    this.stars = [];
+    for (let i = 0; i < 75; i++) {
+      this.stars.push({
+        x: Math.random(),
+        y: Math.random() * 0.55, // In the upper sky above horizon
+        size: Math.random() * 1.8 + 0.6,
+        alpha: Math.random() * 0.65 + 0.25,
+        twinkleSpeed: Math.random() * 2.5 + 1.0
+      });
+    }
   }
 
   private initParticles() {
@@ -132,7 +150,7 @@ export class WMPVisualizer {
   }
 
   // =========================================================================
-  // SYNTHWAVE ATMOSPHERIC BACKGROUND
+  // ANIMATED SYNTHWAVE HORIZON: MOUNTAINS, RETRO SUN & MOVING 3D GRID
   // =========================================================================
   private renderSynthwaveBackground(
     ctx: CanvasRenderingContext2D,
@@ -141,31 +159,234 @@ export class WMPVisualizer {
     bass: number,
     isPlaying: boolean
   ) {
-    // Midnight obsidian to deep retro purple vertical gradient
-    const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
-    bgGrad.addColorStop(0, '#05020a');
-    bgGrad.addColorStop(0.45, '#0e051a');
-    bgGrad.addColorStop(0.78, '#18072d');
-    bgGrad.addColorStop(1, '#080210');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, width, height);
+    const horizonY = height * 0.58;
+    const sunX = width * 0.5;
+    const sunRadius = Math.min(width * 0.22, height * 0.30, 160);
+    const sunY = horizonY - sunRadius * 0.15;
 
-    // Ambient Synthwave Sunset / Horizon Glow
-    const glowPulse = isPlaying
-      ? 0.15 + (bass * 0.18) + Math.sin(this.timeTick * 1.5) * 0.02
-      : 0.08 + Math.sin(this.timeTick * 0.8) * 0.015;
+    // 1. Sky Gradient (Deep Obsidian to Cosmic Violet)
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
+    skyGrad.addColorStop(0, '#040108');
+    skyGrad.addColorStop(0.5, '#0d0418');
+    skyGrad.addColorStop(0.85, '#1a0730');
+    skyGrad.addColorStop(1, '#2d0c4e');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, width, horizonY);
 
-    // Center Hot Magenta Horizon Glow
-    const horizonGlow = ctx.createRadialGradient(
-      width * 0.5, height * 0.55, 10,
-      width * 0.5, height * 0.55, Math.max(width, height) * 0.65
+    // 2. Twinkling Distant Stars in the Sky
+    ctx.save();
+    for (const star of this.stars) {
+      const sx = star.x * width;
+      const sy = star.y * horizonY;
+      const twinkle = Math.sin(this.timeTick * star.twinkleSpeed) * 0.25 + 0.75;
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = star.alpha * twinkle;
+      ctx.fillRect(sx, sy, star.size, star.size);
+    }
+    ctx.restore();
+
+    // 3. Synthwave Solar Corona Glow
+    const coronaGlow = ctx.createRadialGradient(
+      sunX, sunY, sunRadius * 0.2,
+      sunX, sunY, sunRadius * 2.5
     );
-    horizonGlow.addColorStop(0, `rgba(255, 0, 127, ${glowPulse * 0.9})`);
-    horizonGlow.addColorStop(0.4, `rgba(139, 92, 246, ${glowPulse * 0.6})`);
-    horizonGlow.addColorStop(0.8, `rgba(0, 240, 255, ${glowPulse * 0.15})`);
-    horizonGlow.addColorStop(1, 'transparent');
-    ctx.fillStyle = horizonGlow;
-    ctx.fillRect(0, 0, width, height);
+    const pulse = isPlaying ? 0.28 + (bass * 0.25) : 0.16;
+    coronaGlow.addColorStop(0, `rgba(255, 0, 127, ${pulse * 1.2})`);
+    coronaGlow.addColorStop(0.35, `rgba(255, 85, 0, ${pulse * 0.8})`);
+    coronaGlow.addColorStop(0.7, `rgba(139, 92, 246, ${pulse * 0.3})`);
+    coronaGlow.addColorStop(1, 'transparent');
+    ctx.fillStyle = coronaGlow;
+    ctx.fillRect(sunX - sunRadius * 2.5, sunY - sunRadius * 2.5, sunRadius * 5, sunRadius * 5);
+
+    // 4. The Giant Retro Synthwave Sun with Horizontal Blinds
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
+    ctx.clip();
+
+    // Sun vertical gradient (Hot Yellow -> Neon Orange -> Hot Pink)
+    const sunGrad = ctx.createLinearGradient(sunX, sunY - sunRadius, sunX, sunY + sunRadius);
+    sunGrad.addColorStop(0, '#fffb00');
+    sunGrad.addColorStop(0.38, '#ff5500');
+    sunGrad.addColorStop(1, '#ff007f');
+    ctx.fillStyle = sunGrad;
+    ctx.fillRect(sunX - sunRadius, sunY - sunRadius, sunRadius * 2, sunRadius * 2);
+
+    // Horizontal Sun Blinds (Cuts get thicker towards horizon)
+    ctx.fillStyle = '#06020c';
+    const numStripes = 7;
+    for (let i = 0; i < numStripes; i++) {
+      const frac = i / (numStripes - 1);
+      const sy = (sunY - sunRadius * 0.15) + frac * (sunRadius * 1.15);
+      const sh = 2.0 + Math.pow(frac, 1.8) * 9.5;
+      ctx.fillRect(sunX - sunRadius * 1.2, sy, sunRadius * 2.4, sh);
+    }
+    ctx.restore();
+
+    // 5. Synthwave Low-Poly Mountains (Flanking the Sun)
+    this.renderMountains(ctx, width, horizonY, bass);
+
+    // 6. 3D Perspective Ground Plane Moving Towards the Horizon
+    this.renderMovingGroundGrid(ctx, width, height, horizonY, sunX, bass, isPlaying);
+  }
+
+  /**
+   * Helper: Render Synthwave Low-Poly Mountains Flanking the Sun
+   */
+  private renderMountains(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    horizonY: number,
+    bass: number
+  ) {
+    const maxMountainH = horizonY * 0.42;
+
+    // A. Back Mountain Range (Dark Violet silhouette with Hot Magenta Neon Ridge)
+    const backPeaks = [
+      [0.0, 0.05], [0.07, 0.28], [0.15, 0.14], [0.24, 0.38], [0.35, 0.20], [0.44, 0.04],
+      // Valley opening for sun
+      [0.46, 0.0], [0.54, 0.0],
+      // Right peaks
+      [0.56, 0.04], [0.65, 0.22], [0.76, 0.40], [0.86, 0.16], [0.93, 0.26], [1.0, 0.06]
+    ];
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, horizonY);
+    for (const [px, py] of backPeaks) {
+      ctx.lineTo(px * width, horizonY - py * maxMountainH);
+    }
+    ctx.lineTo(width, horizonY);
+    ctx.closePath();
+    ctx.fillStyle = '#0e041c';
+    ctx.fill();
+
+    // Neon Magenta Ridge Line
+    ctx.strokeStyle = '#ff007f';
+    ctx.lineWidth = 1.8;
+    ctx.shadowColor = '#ff007f';
+    ctx.shadowBlur = 8 + (bass * 8);
+    ctx.stroke();
+    ctx.restore();
+
+    // B. Foreground Mountain Peaks (Obsidian Silhouette with Neon Cyan Ridge)
+    const frontPeaks = [
+      [0.0, 0.02], [0.05, 0.16], [0.11, 0.08], [0.18, 0.26], [0.28, 0.12], [0.40, 0.02],
+      // Valley opening
+      [0.43, 0.0], [0.57, 0.0],
+      // Right peaks
+      [0.60, 0.02], [0.71, 0.18], [0.81, 0.29], [0.90, 0.10], [0.96, 0.20], [1.0, 0.04]
+    ];
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, horizonY);
+    for (const [px, py] of frontPeaks) {
+      ctx.lineTo(px * width, horizonY - py * maxMountainH);
+    }
+    ctx.lineTo(width, horizonY);
+    ctx.closePath();
+    ctx.fillStyle = '#07020e';
+    ctx.fill();
+
+    // Neon Cyan Ridge Line
+    ctx.strokeStyle = '#00f0ff';
+    ctx.lineWidth = 2.0;
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 10 + (bass * 10);
+    ctx.stroke();
+
+    // Low-poly facet accent ribs
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.22)';
+    ctx.lineWidth = 1;
+    ctx.shadowBlur = 0;
+    for (let i = 1; i < frontPeaks.length - 1; i += 2) {
+      const [px, py] = frontPeaks[i];
+      if (py > 0.05) {
+        ctx.beginPath();
+        ctx.moveTo(px * width, horizonY - py * maxMountainH);
+        ctx.lineTo((px + 0.03) * width, horizonY);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Helper: Render 3D Perspective Ground Plane Moving Forward
+   */
+  private renderMovingGroundGrid(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    horizonY: number,
+    vanishingX: number,
+    bass: number,
+    isPlaying: boolean
+  ) {
+    const groundH = height - horizonY;
+    if (groundH <= 5) return;
+
+    // Ground reflective floor
+    const floorGrad = ctx.createLinearGradient(0, horizonY, 0, height);
+    floorGrad.addColorStop(0, '#06020c');
+    floorGrad.addColorStop(0.5, '#0e041c');
+    floorGrad.addColorStop(1, '#15062a');
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(0, horizonY, width, groundH);
+
+    // Perspective Longitudinal Lines (Rays fanning from horizon)
+    const rays = 20;
+    ctx.save();
+    for (let i = -rays / 2; i <= rays / 2; i++) {
+      const bottomX = vanishingX + (i * (width * 0.115));
+      const rayGrad = ctx.createLinearGradient(vanishingX, horizonY, bottomX, height);
+      rayGrad.addColorStop(0, 'rgba(0, 240, 255, 0.0)');
+      rayGrad.addColorStop(0.3, 'rgba(0, 240, 255, 0.18)');
+      rayGrad.addColorStop(1, 'rgba(0, 240, 255, 0.55)');
+      ctx.strokeStyle = rayGrad;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(vanishingX, horizonY);
+      ctx.lineTo(bottomX, height);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Perspective Transverse Lines Moving Forward Toward Viewer
+    const speed = isPlaying ? 0.007 + (bass * 0.012) : 0.0028;
+    this.gridOffset = (this.gridOffset + speed) % 1;
+
+    const lineCount = 18;
+    ctx.save();
+    for (let k = 0; k < lineCount; k++) {
+      const t = (k + this.gridOffset) / lineCount;
+      const py = horizonY + Math.pow(t, 2.7) * groundH;
+      const alpha = Math.pow(t, 1.2) * (0.65 + bass * 0.35);
+
+      const color = (k % 2 === 0) ? '#ff007f' : '#00f0ff';
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = alpha;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 6 + (t * 8);
+      ctx.lineWidth = 1.0 + t * 1.8;
+
+      ctx.beginPath();
+      ctx.moveTo(0, py);
+      ctx.lineTo(width, py);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Horizon Neon Fog / Mist Line
+    ctx.save();
+    const fogGrad = ctx.createLinearGradient(0, horizonY - 12, 0, horizonY + 22);
+    fogGrad.addColorStop(0, 'transparent');
+    fogGrad.addColorStop(0.5, 'rgba(255, 0, 127, 0.35)');
+    fogGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = fogGrad;
+    ctx.fillRect(0, horizonY - 12, width, 34);
+    ctx.restore();
   }
 
   // =========================================================================

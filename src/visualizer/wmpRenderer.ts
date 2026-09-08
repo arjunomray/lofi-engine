@@ -446,15 +446,15 @@ export class WMPVisualizer {
     const horizonY = height * 0.58;
     const cx = width * 0.5;
 
-    // Calm, smooth lo-fi cruising speed (no jerky accelerations)
-    const roadSpeed = isPlaying ? 0.007 + (this.smoothedBass * 0.004) : 0.003;
+    // Increased highway cruising speed
+    const roadSpeed = isPlaying ? 0.016 + (this.smoothedBass * 0.008) : 0.007;
     this.roadOffset = (this.roadOffset + roadSpeed) % 1;
 
-    // Rock-steady car stance: centered on road, smooth subtle suspension breathing float
+    // Rock-steady car stance: compact size, centered on road, smooth subtle suspension breathing float
     const carFloat = Math.sin(this.timeTick * 1.5) * 0.75;
-    const carW = Math.max(340, Math.min(width * 0.46, 480));
+    const carW = Math.max(220, Math.min(width * 0.30, 310));
     const carH = carW * 0.44;
-    const carBaseY = Math.min(height * 0.83, height - 70) + carFloat;
+    const carBaseY = Math.min(height * 0.83, height - 60) + carFloat;
     const carTopY = carBaseY - carH;
 
     // 1. Clean Highway Street (Smooth road ribbon with neon shoulders and single dashed divider)
@@ -677,10 +677,10 @@ export class WMPVisualizer {
     ctx.stroke();
     ctx.restore();
 
-    // 6. Illuminated Inset License Plate
-    const plateW = carW * 0.24;
-    const plateH = bodyH * 0.32;
-    const plateY = bodyTopY + bodyH * 0.40;
+    // 6. Illuminated Inset License Plate (Wide layout so text fits with generous margin)
+    const plateW = carW * 0.42;
+    const plateH = Math.max(16, bodyH * 0.34);
+    const plateY = bodyTopY + bodyH * 0.38;
     const plateX = carX - plateW * 0.5;
 
     this.roundRect(ctx, plateX, plateY, plateW, plateH, 4);
@@ -695,7 +695,8 @@ export class WMPVisualizer {
     ctx.fillStyle = '#ffb703';
     ctx.shadowColor = '#ffb703';
     ctx.shadowBlur = 4;
-    ctx.font = `700 ${Math.max(8, plateW * 0.16)}px 'JetBrains Mono', monospace`;
+    const plateFontSize = Math.max(7.5, Math.min(10.5, plateH * 0.55));
+    ctx.font = `700 ${plateFontSize}px 'JetBrains Mono', monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('LO-FI // 808', carX, plateY + plateH * 0.5);
@@ -958,7 +959,7 @@ export class WMPVisualizer {
     ctx.fillStyle = '#a78bfa';
     ctx.shadowColor = '#a78bfa';
     ctx.shadowBlur = 3;
-    ctx.fillText(`BASS ${bassPct}%  •  MIDS ${midsPct}%  •  HI ${trebPct}%  •  ~76 BPM [FM STEREO]`, carX, telemY);
+    ctx.fillText(`BASS ${bassPct}% • MIDS ${midsPct}% • HI ${trebPct}% • ~76 BPM`, carX, telemY);
 
     ctx.restore();
   }

@@ -6,6 +6,7 @@
 
   export let engine: AudioEngine;
   export let isPlaying: boolean;
+  export let seed: string = 'lofi-vibe';
   export let onModeChanged: (mode: VisualizerMode) => void;
 
   let canvasElement: HTMLCanvasElement;
@@ -20,7 +21,7 @@
     function loop() {
       if (visualizer && engine) {
         const visualData = engine.getVisualData();
-        visualizer.render(visualData, isPlaying);
+        visualizer.render(visualData, isPlaying, seed);
       }
       animFrameId = requestAnimationFrame(loop);
     }
@@ -42,7 +43,7 @@
   }
 
   export function cycleMode(): VisualizerMode {
-    if (!visualizer) return 'bars_and_waves';
+    if (!visualizer) return 'vintage_vinyl';
     const nextMode = visualizer.cycleMode();
     onModeChanged(nextMode);
     return nextMode;

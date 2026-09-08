@@ -21,7 +21,7 @@
   let isPlaying = $state(false);
   let showSettings = $state(false);
   let transitionNotice = $state('');
-  let currentMode = $state<VisualizerMode>('bars_and_waves');
+  let currentMode = $state<VisualizerMode>('vintage_vinyl');
 
   // DSP Controls
   let params = $state<LoFiDSPParams>({ ...DEFAULT_DSP_PARAMS });
@@ -110,9 +110,9 @@
 
   function formatModeName(m: VisualizerMode): string {
     switch (m) {
-      case 'bars_and_waves': return 'Bars & Waves';
-      case 'neon_scope': return 'Neon Scope';
-      case 'radial_alchemy': return 'Radial Alchemy';
+      case 'vintage_vinyl': return 'Vintage Vinyl';
+      case 'cassette_tape': return 'Cassette Tape';
+      case 'analog_scope': return 'Analog Scope';
     }
   }
 </script>
@@ -124,6 +124,7 @@
       bind:this={visualizerRef}
       {engine}
       {isPlaying}
+      seed={seedInput}
       onModeChanged={(m) => currentMode = m}
     />
   {/if}

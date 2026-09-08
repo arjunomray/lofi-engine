@@ -152,7 +152,11 @@
     width: 100vw;
     height: 100vh;
     overflow: hidden;
-    background-color: #06070a;
+    background-color: #080503;
+    background: 
+      radial-gradient(ellipse 75% 65% at 50% 38%, rgba(55, 32, 17, 0.45) 0%, rgba(22, 13, 8, 0.8) 55%, #070403 100%),
+      radial-gradient(circle at 10% 90%, rgba(180, 83, 9, 0.08) 0%, transparent 40%),
+      radial-gradient(circle at 90% 10%, rgba(217, 119, 6, 0.06) 0%, transparent 40%);
   }
 
   .bottom-hud {

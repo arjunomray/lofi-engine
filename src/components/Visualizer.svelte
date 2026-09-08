@@ -70,9 +70,13 @@
     pointer-events: none;
     position: absolute;
     inset: 0;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.22) 50%);
-    background-size: 100% 4px;
+    /* Soft dark-mahogany vignette framing + micro amber/charcoal scanlines */
+    background: 
+      radial-gradient(ellipse at 50% 50%, transparent 48%, rgba(14, 9, 6, 0.45) 75%, rgba(7, 4, 2, 0.88) 100%),
+      linear-gradient(rgba(245, 158, 11, 0.015) 50%, rgba(0, 0, 0, 0.16) 50%);
+    background-size: 100% 100%, 100% 4px;
+    box-shadow: inset 0 0 100px rgba(5, 3, 2, 0.75);
     z-index: 5;
-    opacity: 0.3;
+    opacity: 0.85;
   }
 </style>

@@ -29,6 +29,7 @@ export class WMPVisualizer {
   private particles: Particle[] = [];
   private particleCount: number = 55;
   private timeTick: number = 0;
+  private vinylRotation: number = 0;
 
   // Warm Lo-Fi Color Palette: Warm Amber, Honey, Apricot, Candlelight
   private readonly WARM_AMBER = 36;
@@ -88,23 +89,34 @@ export class WMPVisualizer {
 
     this.timeTick += 0.015;
 
-    // 1. Cozy deep roasted coffee / mahogany background
-    ctx.fillStyle = '#0c0906';
+    // 1. Rich dark roasted coffee / mahogany gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+    bgGrad.addColorStop(0, '#070503');      // Deep midnight ceiling
+    bgGrad.addColorStop(0.48, '#130b06');   // Warm mahogany heart
+    bgGrad.addColorStop(0.8, '#19100a');    // Warm wood floor
+    bgGrad.addColorStop(1, '#090503');      // Bottom shadow
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, width, height);
 
-    // 2. Warm fireplace / desk lamp glow in the center
+    // 2. Breathing fireplace / warm lamp hearth glow
     const lampGlow = ctx.createRadialGradient(
-      width / 2, height * 0.62, 10,
-      width / 2, height * 0.62, Math.max(width, height) * 0.65
+      width * 0.5, height * 0.58, 15,
+      width * 0.5, height * 0.58, Math.max(width, height) * 0.72
     );
-    const glowIntensity = isPlaying ? 0.12 + (data.bass * 0.14) : 0.06;
-    lampGlow.addColorStop(0, `hsla(${this.WARM_AMBER}, 90%, 42%, ${glowIntensity})`);
-    lampGlow.addColorStop(0.5, `hsla(${this.WARM_AMBER - 6}, 80%, 20%, ${glowIntensity * 0.45})`);
+    const glowPulse = isPlaying 
+      ? 0.16 + (data.bass * 0.16) + Math.sin(this.timeTick * 1.5) * 0.02
+      : 0.08 + Math.sin(this.timeTick * 0.8) * 0.015;
+    lampGlow.addColorStop(0, `hsla(${this.WARM_AMBER}, 95%, 45%, ${glowPulse})`);
+    lampGlow.addColorStop(0.35, `hsla(${this.WARM_AMBER - 8}, 85%, 26%, ${glowPulse * 0.55})`);
+    lampGlow.addColorStop(0.7, `rgba(45, 24, 12, ${glowPulse * 0.25})`);
     lampGlow.addColorStop(1, 'transparent');
     ctx.fillStyle = lampGlow;
     ctx.fillRect(0, 0, width, height);
 
-    // 3. Floating warm amber embers & dust motes
+    // 3. Faint rotating vinyl record grooves etched into backdrop
+    this.renderVinylBackdrop(ctx, width, height, isPlaying);
+
+    // 4. Floating warm amber embers & dust motes
     this.renderEmbers(ctx, width, height, data.bass, isPlaying);
 
     // 4. Render Active Visualizer Mode
@@ -356,5 +368,67 @@ export class WMPVisualizer {
       ctx.arc(px, py, pSize, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
+
+  // =========================================================================
+  // FAINT ROTATING VINYL RECORD BACKDROP
+  // =========================================================================
+  private renderVinylBackdrop(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    isPlaying: boolean
+  ) {
+    const cx = width * 0.5;
+    const cy = height * 0.52;
+    const maxRadius = Math.min(width, height) * 0.44;
+    const minRadius = Math.min(width, height) * 0.12;
+
+    this.vinylRotation += isPlaying ? 0.003 : 0.0008;
+
+    ctx.save();
+
+    // Subtle turntable platter edge
+    ctx.strokeStyle = 'rgba(245, 158, 11, 0.04)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, maxRadius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Concentric vinyl grooves
+    const grooveCount = 14;
+    const grooveStep = (maxRadius - minRadius) / grooveCount;
+
+    ctx.lineWidth = 1;
+    for (let i = 0; i < grooveCount; i++) {
+      const r = minRadius + i * grooveStep;
+      // Alternate subtle opacities for realistic record texture
+      const alpha = (i % 3 === 0) ? 0.035 : 0.018;
+      ctx.strokeStyle = `rgba(245, 158, 11, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Faint rotating specular sheen (reflection on vinyl grooves)
+    ctx.translate(cx, cy);
+    ctx.rotate(this.vinylRotation);
+
+    for (let dir = 0; dir < 2; dir++) {
+      const wedgeAngle = dir * Math.PI;
+      const sheen = ctx.createRadialGradient(0, 0, minRadius, 0, 0, maxRadius);
+      sheen.addColorStop(0, 'rgba(254, 215, 170, 0.025)');
+      sheen.addColorStop(0.5, 'rgba(245, 158, 11, 0.015)');
+      sheen.addColorStop(1, 'transparent');
+
+      ctx.fillStyle = sheen;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, maxRadius, wedgeAngle - 0.28, wedgeAngle + 0.28);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.restore();
   }
 }

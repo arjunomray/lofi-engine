@@ -66,13 +66,13 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #52525b;
-    transition: background 0.3s;
+    background: #3f2e22;
+    transition: all 0.3s;
   }
 
   .status-dot.active {
-    background: #10b981;
-    box-shadow: 0 0 10px #10b981;
+    background: #f59e0b;
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.9), 0 0 4px #fef3c7;
   }
 
   .seed-label {

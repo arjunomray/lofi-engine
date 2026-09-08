@@ -16,6 +16,7 @@
 
   // State
   let seedInput = $state('rainy-tokyo');
+  let recentSeeds = $state<string[]>(['rainy-tokyo']);
   let currentSong = $state<GeneratedSong | null>(null);
   let isPlaying = $state(false);
   let showSettings = $state(false);
@@ -29,6 +30,12 @@
   let engine = $state<AudioEngine | null>(null);
   let visualizerRef = $state<any>(null);
 
+  function recordSeed(seed: string) {
+    const clean = seed.trim();
+    if (!clean) return;
+    recentSeeds = [clean, ...recentSeeds.filter(s => s !== clean)].slice(0, 5);
+  }
+
   onMount(() => {
     engine = new AudioEngine();
     
@@ -36,6 +43,7 @@
     engine.setAutoEvolve(true, 2, (newSong) => {
       currentSong = newSong;
       seedInput = String(newSong.seed);
+      recordSeed(seedInput);
       transitionNotice = `Crossfaded to "${newSong.seed}"`;
       setTimeout(() => {
         transitionNotice = '';
@@ -48,9 +56,17 @@
   function generateSong(seed: string) {
     const cleanSeed = seed.trim() || 'lofi-vibe';
     seedInput = cleanSeed;
+    recordSeed(cleanSeed);
     currentSong = LoFiGenerator.generate({ seed: cleanSeed });
     if (isPlaying && engine) {
       engine.play(currentSong);
+    }
+  }
+
+  function handleSetSeed(newSeed: string) {
+    generateSong(newSeed);
+    if (!isPlaying) {
+      togglePlay();
     }
   }
 
@@ -117,7 +133,9 @@
     seed={seedInput}
     {isPlaying}
     currentMode={formatModeName(currentMode)}
+    {recentSeeds}
     onRollSeed={rollNewSeed}
+    onSetSeed={handleSetSeed}
     onCycleMode={handleModeCycle}
   />
 

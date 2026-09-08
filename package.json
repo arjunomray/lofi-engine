@@ -11,7 +11,9 @@
     "test": "tsx scripts/test-generator.ts"
   },
   "dependencies": {
-    "@tonejs/midi": "^2.0.28"
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@tonejs/midi": "^2.0.28",
+    "svelte": "^5.57.0"
   },
   "devDependencies": {
     "@types/node": "^22.13.5",

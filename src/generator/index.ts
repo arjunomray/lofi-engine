@@ -347,6 +347,7 @@ export class LoFiGenerator {
 }
 
 export * from './types.js';
+export type * from './types.js';
 export * from './prng.js';
 export * from './chords.js';
 export * from './rhythm.js';

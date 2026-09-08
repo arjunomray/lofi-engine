@@ -10,10 +10,10 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: #070503; /* Deep cozy midnight espresso */
+  background-color: #080411; /* Deep Synthwave midnight obsidian */
   background: 
-    radial-gradient(ellipse 80% 65% at 50% 35%, #1e130a 0%, #0d0805 60%, #050302 100%);
-  color: #f3ece4; /* Soft warm eggshell linen */
+    radial-gradient(ellipse 80% 65% at 50% 35%, #18092a 0%, #0c0517 60%, #05020a 100%);
+  color: #f1eef8; /* Crisp neon eggshell */
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -32,28 +32,28 @@ html, body {
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* Cozy Glassmorphism surfaces */
+/* Synthwave Glassmorphism surfaces */
 .glass-panel {
-  background: rgba(22, 17, 13, 0.82);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(245, 158, 11, 0.14);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(254, 215, 170, 0.08);
+  background: rgba(16, 9, 28, 0.85);
+  backdrop-filter: blur(26px);
+  -webkit-backdrop-filter: blur(26px);
+  border: 1px solid rgba(0, 240, 255, 0.18);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), 0 0 25px rgba(168, 85, 247, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .glass-pill {
-  background: rgba(20, 15, 11, 0.88);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(245, 158, 11, 0.16);
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(254, 215, 170, 0.1);
+  background: rgba(18, 10, 32, 0.88);
+  backdrop-filter: blur(26px);
+  -webkit-backdrop-filter: blur(26px);
+  border: 1px solid rgba(0, 240, 255, 0.22);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.65), 0 0 18px rgba(0, 240, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 /* Buttons */
 .btn-glass {
-  background: rgba(245, 158, 11, 0.06);
-  border: 1px solid rgba(245, 158, 11, 0.15);
-  color: #e6ded5;
+  background: rgba(0, 240, 255, 0.06);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  color: #e2d9f3;
   padding: 8px 18px;
   border-radius: 9999px;
   font-size: 12px;
@@ -66,9 +66,10 @@ html, body {
 }
 
 .btn-glass:hover {
-  background: rgba(245, 158, 11, 0.14);
-  border-color: rgba(245, 158, 11, 0.3);
-  color: #fffaf5;
+  background: rgba(0, 240, 255, 0.15);
+  border-color: rgba(0, 240, 255, 0.45);
+  color: #ffffff;
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.3);
   transform: translateY(-1px);
 }
 
@@ -76,45 +77,46 @@ html, body {
   transform: translateY(0);
 }
 
-/* Master Play Button (Warm Candlelight Amber) */
+/* Master Play Button (Synthwave Neon Gradient) */
 .btn-play {
-  background: linear-gradient(135deg, #d97706, #b45309);
-  color: #fffaf0;
+  background: linear-gradient(135deg, #ff007f 0%, #a855f7 50%, #00f0ff 100%);
+  color: #ffffff;
   font-weight: 700;
   padding: 12px 34px;
   border-radius: 9999px;
   border: none;
   font-size: 13px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 8px 25px rgba(217, 119, 6, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 25px rgba(255, 0, 127, 0.45), 0 0 15px rgba(0, 240, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-play:hover {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  transform: scale(1.03);
-  box-shadow: 0 12px 32px rgba(245, 158, 11, 0.5);
+  background: linear-gradient(135deg, #ff1a8c 0%, #b86bfc 50%, #38bdf8 100%);
+  transform: scale(1.04);
+  box-shadow: 0 12px 32px rgba(255, 0, 127, 0.6), 0 0 22px rgba(0, 240, 255, 0.5);
 }
 
 .btn-play.playing {
-  background: linear-gradient(135deg, #b45309, #78350f);
-  box-shadow: 0 8px 25px rgba(180, 83, 9, 0.35);
-  color: #fef3c7;
+  background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.45), 0 0 18px rgba(6, 182, 212, 0.4);
+  color: #fdf4ff;
 }
 
 .btn-play.playing:hover {
-  background: linear-gradient(135deg, #d97706, #92400e);
+  background: linear-gradient(135deg, #9d6fff 0%, #22d3ee 100%);
+  box-shadow: 0 12px 32px rgba(139, 92, 246, 0.6), 0 0 24px rgba(6, 182, 212, 0.5);
 }
 
 /* Icon Buttons */
 .btn-icon {
   background: transparent;
   border: none;
-  color: #a89f91;
+  color: #a79bbd;
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -126,13 +128,15 @@ html, body {
 }
 
 .btn-icon:hover {
-  color: #fef3c7;
-  background: rgba(245, 158, 11, 0.12);
+  color: #00f0ff;
+  background: rgba(0, 240, 255, 0.12);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
 }
 
 .btn-icon.active {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.2);
+  color: #ff007f;
+  background: rgba(255, 0, 127, 0.18);
+  box-shadow: 0 0 14px rgba(255, 0, 127, 0.35);
 }
 
 /* Range Sliders */
@@ -141,7 +145,7 @@ input[type="range"] {
   appearance: none;
   width: 100%;
   height: 5px;
-  background: rgba(245, 158, 11, 0.15);
+  background: rgba(0, 240, 255, 0.18);
   border-radius: 5px;
   outline: none;
   cursor: pointer;
@@ -149,7 +153,7 @@ input[type="range"] {
 }
 
 input[type="range"]:hover {
-  background: rgba(245, 158, 11, 0.25);
+  background: rgba(0, 240, 255, 0.3);
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -158,25 +162,26 @@ input[type="range"]::-webkit-slider-thumb {
   width: 15px;
   height: 15px;
   border-radius: 50%;
-  background: #f59e0b;
-  border: 2px solid #1a140e;
-  box-shadow: 0 0 12px rgba(245, 158, 11, 0.7);
+  background: #00f0ff;
+  border: 2px solid #0f071d;
+  box-shadow: 0 0 14px rgba(0, 240, 255, 0.85);
   cursor: pointer;
   transition: transform 0.15s, background 0.15s;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.25);
-  background: #fbbf24;
+  background: #38bdf8;
+  box-shadow: 0 0 18px rgba(0, 240, 255, 1);
 }
 
 input[type="range"]::-moz-range-thumb {
   width: 15px;
   height: 15px;
   border-radius: 50%;
-  background: #f59e0b;
-  border: 2px solid #1a140e;
-  box-shadow: 0 0 12px rgba(245, 158, 11, 0.7);
+  background: #00f0ff;
+  border: 2px solid #0f071d;
+  box-shadow: 0 0 14px rgba(0, 240, 255, 0.85);
   cursor: pointer;
 }
 

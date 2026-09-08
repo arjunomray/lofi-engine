@@ -118,7 +118,7 @@
         <!-- Input Form to type custom seed -->
         <form onsubmit={handleFormSubmit} class="seed-input-form">
           <div class="input-wrapper">
-            <svg class="input-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+            <svg class="input-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" stroke-width="2">
               <path d="M12 20h9"/>
               <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
             </svg>
@@ -177,7 +177,7 @@
     class="btn-glass font-mono"
     title="Cycle visualizer mode"
   >
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" stroke-width="2">
       <polygon points="12 2 2 7 12 12 22 7 12 2"/>
       <polyline points="2 17 12 22 22 17"/>
       <polyline points="2 12 12 17 22 12"/>
@@ -221,54 +221,56 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #3f2e22;
+    background: #281540;
     transition: all 0.3s;
   }
 
   .status-dot.active {
-    background: #f59e0b;
-    box-shadow: 0 0 12px rgba(245, 158, 11, 0.9), 0 0 4px #fef3c7;
+    background: #00f0ff;
+    box-shadow: 0 0 12px #00f0ff, 0 0 4px #fff;
   }
 
   .seed-label {
     font-size: 11px;
-    color: #8c7e70;
-    letter-spacing: 0.05em;
+    color: #9d8db5;
+    letter-spacing: 0.06em;
   }
 
   .seed-btn {
     background: transparent;
     border: none;
-    color: #f59e0b;
+    color: #00f0ff;
     font-size: 13px;
     font-weight: 600;
     display: flex;
     align-items: center;
     gap: 6px;
     cursor: pointer;
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
     transition: color 0.2s;
   }
 
   .seed-btn:hover {
-    color: #fbbf24;
+    color: #38bdf8;
+    text-shadow: 0 0 14px rgba(0, 240, 255, 0.8);
   }
 
   .dice-icon {
     font-size: 12px;
-    opacity: 0.85;
+    opacity: 0.9;
   }
 
   .pill-divider {
     width: 1px;
     height: 14px;
-    background: rgba(245, 158, 11, 0.22);
+    background: rgba(0, 240, 255, 0.25);
     margin: 0 2px;
   }
 
   .pencil-btn {
     background: transparent;
     border: none;
-    color: #a89f91;
+    color: #9d8db5;
     padding: 5px;
     border-radius: 6px;
     display: flex;
@@ -279,13 +281,13 @@
   }
 
   .pencil-btn:hover {
-    color: #fef3c7;
-    background: rgba(245, 158, 11, 0.15);
+    color: #00f0ff;
+    background: rgba(0, 240, 255, 0.15);
   }
 
   .pencil-btn.active {
-    color: #f59e0b;
-    background: rgba(245, 158, 11, 0.25);
+    color: #ff007f;
+    background: rgba(255, 0, 127, 0.25);
   }
 
   /* Seed Editor Dropdown Popover */
@@ -296,11 +298,11 @@
     width: 320px;
     padding: 14px;
     border-radius: 16px;
-    background: rgba(18, 13, 9, 0.95);
+    background: rgba(16, 8, 28, 0.95);
     backdrop-filter: blur(28px);
     -webkit-backdrop-filter: blur(28px);
-    border: 1px solid rgba(245, 158, 11, 0.22);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), 0 0 15px rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(0, 240, 255, 0.25);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(168, 85, 247, 0.15);
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -323,44 +325,45 @@
   .input-icon {
     position: absolute;
     left: 10px;
-    color: #d97706;
+    color: #00f0ff;
     pointer-events: none;
   }
 
   .seed-text-input {
     width: 100%;
     padding: 8px 12px 8px 30px;
-    background: rgba(8, 5, 3, 0.85);
-    border: 1px solid rgba(245, 158, 11, 0.22);
+    background: rgba(8, 4, 16, 0.9);
+    border: 1px solid rgba(0, 240, 255, 0.25);
     border-radius: 8px;
-    color: #fffaf0;
+    color: #ffffff;
     font-size: 12px;
     outline: none;
     transition: all 0.2s ease;
   }
 
   .seed-text-input:focus {
-    border-color: #f59e0b;
-    box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
+    border-color: #00f0ff;
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.35);
   }
 
   .seed-submit-btn {
-    background: linear-gradient(135deg, #d97706, #b45309);
+    background: linear-gradient(135deg, #ff007f, #8b5cf6);
     border: none;
-    color: #fffaf0;
+    color: #ffffff;
     padding: 8px 14px;
     border-radius: 8px;
     font-size: 11px;
     font-weight: 600;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
     cursor: pointer;
+    box-shadow: 0 0 12px rgba(255, 0, 127, 0.4);
     transition: all 0.2s ease;
     white-space: nowrap;
   }
 
   .seed-submit-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+    background: linear-gradient(135deg, #ff1a8c, #a855f7);
+    box-shadow: 0 0 16px rgba(255, 0, 127, 0.6);
   }
 
   .seed-submit-btn:disabled {
@@ -370,7 +373,7 @@
 
   /* Recent Seeds Section */
   .recent-section {
-    border-top: 1px solid rgba(245, 158, 11, 0.12);
+    border-top: 1px solid rgba(0, 240, 255, 0.15);
     padding-top: 10px;
     display: flex;
     flex-direction: column;
@@ -379,7 +382,7 @@
 
   .recent-header {
     font-size: 10px;
-    color: #8c7e70;
+    color: #9d8db5;
     letter-spacing: 0.08em;
     display: flex;
     align-items: center;
@@ -396,7 +399,7 @@
   .recent-item {
     background: transparent;
     border: none;
-    color: #d1c7bc;
+    color: #d1c7e6;
     padding: 6px 8px;
     border-radius: 6px;
     text-align: left;
@@ -409,14 +412,14 @@
   }
 
   .recent-item:hover {
-    background: rgba(245, 158, 11, 0.12);
-    color: #fffaf0;
+    background: rgba(0, 240, 255, 0.12);
+    color: #ffffff;
   }
 
   .recent-item.active {
-    color: #f59e0b;
+    color: #00f0ff;
     font-weight: 600;
-    background: rgba(245, 158, 11, 0.08);
+    background: rgba(0, 240, 255, 0.1);
   }
 
   .recent-left {
@@ -429,7 +432,7 @@
   }
 
   .recent-dot {
-    color: #d97706;
+    color: #ff007f;
     font-size: 14px;
     line-height: 1;
   }
@@ -442,11 +445,11 @@
 
   .active-badge {
     font-size: 9px;
-    background: rgba(245, 158, 11, 0.2);
-    color: #fbbf24;
-    border: 1px solid rgba(245, 158, 11, 0.35);
+    background: rgba(0, 240, 255, 0.2);
+    color: #38bdf8;
+    border: 1px solid rgba(0, 240, 255, 0.4);
     padding: 2px 6px;
     border-radius: 4px;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
   }
 </style>

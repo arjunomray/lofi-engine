@@ -71,12 +71,12 @@
     pointer-events: none;
     position: absolute;
     inset: 0;
-    /* Soft dark-mahogany vignette framing + micro amber/charcoal scanlines */
+    /* Synthwave neon-CRT framing + micro cyan/magenta scanlines */
     background: 
-      radial-gradient(ellipse at 50% 50%, transparent 48%, rgba(14, 9, 6, 0.45) 75%, rgba(7, 4, 2, 0.88) 100%),
-      linear-gradient(rgba(245, 158, 11, 0.015) 50%, rgba(0, 0, 0, 0.16) 50%);
+      radial-gradient(ellipse at 50% 50%, transparent 48%, rgba(20, 8, 38, 0.45) 75%, rgba(6, 2, 14, 0.9) 100%),
+      linear-gradient(rgba(0, 240, 255, 0.015) 50%, rgba(0, 0, 0, 0.2) 50%);
     background-size: 100% 100%, 100% 4px;
-    box-shadow: inset 0 0 100px rgba(5, 3, 2, 0.75);
+    box-shadow: inset 0 0 100px rgba(8, 2, 16, 0.85);
     z-index: 5;
     opacity: 0.85;
   }

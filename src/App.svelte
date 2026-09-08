@@ -171,11 +171,11 @@
     width: 100vw;
     height: 100vh;
     overflow: hidden;
-    background-color: #080503;
+    background-color: #080411;
     background: 
-      radial-gradient(ellipse 75% 65% at 50% 38%, rgba(55, 32, 17, 0.45) 0%, rgba(22, 13, 8, 0.8) 55%, #070403 100%),
-      radial-gradient(circle at 10% 90%, rgba(180, 83, 9, 0.08) 0%, transparent 40%),
-      radial-gradient(circle at 90% 10%, rgba(217, 119, 6, 0.06) 0%, transparent 40%);
+      radial-gradient(ellipse 75% 65% at 50% 38%, rgba(68, 22, 110, 0.45) 0%, rgba(20, 9, 36, 0.85) 55%, #06020c 100%),
+      radial-gradient(circle at 12% 88%, rgba(255, 0, 127, 0.09) 0%, transparent 45%),
+      radial-gradient(circle at 88% 12%, rgba(0, 240, 255, 0.08) 0%, transparent 45%);
   }
 
   .bottom-hud {

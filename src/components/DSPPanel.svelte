@@ -144,7 +144,8 @@
   }
 
   .dsp-val {
-    color: #f59e0b;
+    color: #00f0ff;
     font-weight: 600;
+    text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
   }
 </style>

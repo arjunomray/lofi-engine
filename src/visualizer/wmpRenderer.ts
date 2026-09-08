@@ -384,8 +384,8 @@ export class WMPVisualizer {
     }
     ctx.restore();
 
-    // Perspective Transverse Lines Moving Forward Toward Viewer
-    const speed = isPlaying ? 0.007 + (bass * 0.012) : 0.0028;
+    // Perspective Transverse Lines Moving Forward Toward Viewer (Faster Synthwave Cruise)
+    const speed = isPlaying ? 0.018 + (bass * 0.016) : 0.008;
     this.gridOffset = (this.gridOffset + speed) % 1;
 
     const lineCount = 18;
@@ -446,8 +446,8 @@ export class WMPVisualizer {
     const horizonY = height * 0.58;
     const cx = width * 0.5;
 
-    // Increased highway cruising speed
-    const roadSpeed = isPlaying ? 0.016 + (this.smoothedBass * 0.008) : 0.007;
+    // High-speed highway cruise
+    const roadSpeed = isPlaying ? 0.034 + (this.smoothedBass * 0.016) : 0.014;
     this.roadOffset = (this.roadOffset + roadSpeed) % 1;
 
     // Rock-steady car stance: compact size, centered on road, smooth subtle suspension breathing float
@@ -789,11 +789,11 @@ export class WMPVisualizer {
     isPlaying: boolean,
     seedText: string
   ) {
-    const winTopY = carTopY + carH * 0.08;
-    const winBottomY = carTopY + carH * 0.45;
+    const winTopY = carTopY + carH * 0.06;
+    const winBottomY = carTopY + carH * 0.46;
     const winH = winBottomY - winTopY;
-    const winTopW = carW * 0.48;
-    const winBottomW = carW * 0.64;
+    const winTopW = carW * 0.52;
+    const winBottomW = carW * 0.68;
 
     ctx.save();
 
@@ -838,18 +838,18 @@ export class WMPVisualizer {
       ctx.stroke();
     }
 
-    // 3. Audio Details Header: Seed Title & Live Indicator
-    const cleanSeed = seedText.toUpperCase().slice(0, 15);
-    const headerY = winTopY + 11;
+    // 3. Audio Details Header: Seed Title & Live Indicator (Larger, prominent font)
+    const cleanSeed = seedText.toUpperCase().slice(0, 14);
+    const headerY = winTopY + 12;
 
     // Pulse Live / Paused Dot
-    const dotX = carX - winTopW * 0.40;
+    const dotX = carX - winTopW * 0.42;
     ctx.beginPath();
-    ctx.arc(dotX, headerY, 2.5, 0, Math.PI * 2);
+    ctx.arc(dotX, headerY, 3, 0, Math.PI * 2);
     if (isPlaying) {
       ctx.fillStyle = '#00ffaa';
       ctx.shadowColor = '#00ffaa';
-      ctx.shadowBlur = 5;
+      ctx.shadowBlur = 6;
     } else {
       ctx.fillStyle = '#ffb703';
       ctx.shadowColor = '#ffb703';
@@ -858,24 +858,25 @@ export class WMPVisualizer {
     ctx.fill();
 
     // Status & Seed Text
-    ctx.font = `700 ${Math.max(7.5, winTopW * 0.052)}px 'JetBrains Mono', monospace`;
+    const headerFontSize = Math.max(9.5, Math.min(13.5, winTopW * 0.082));
+    ctx.font = `700 ${headerFontSize}px 'JetBrains Mono', monospace`;
     ctx.fillStyle = '#00f0ff';
     ctx.shadowColor = '#00f0ff';
-    ctx.shadowBlur = 5;
+    ctx.shadowBlur = 6;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(isPlaying ? 'LIVE AUDIO' : 'PAUSED', dotX + 7, headerY);
+    ctx.fillText(isPlaying ? 'LIVE' : 'PAUSED', dotX + 7, headerY);
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#ff007f';
     ctx.shadowColor = '#ff007f';
-    ctx.shadowBlur = 4;
-    ctx.fillText(`♫ ${cleanSeed}`, carX + winTopW * 0.42, headerY);
+    ctx.shadowBlur = 5;
+    ctx.fillText(`♫ ${cleanSeed}`, carX + winTopW * 0.44, headerY);
 
     // 4. Live Audio Spectrum Equalizer (FFT Frequency Columns)
-    const eqAreaY = winTopY + 20;
-    const eqAreaH = winH * 0.44;
-    const numBars = 18;
+    const eqAreaY = winTopY + 23;
+    const eqAreaH = winH * 0.38;
+    const numBars = 16;
     const eqW = winBottomW * 0.82;
     const barSpacing = eqW / numBars;
     const barW = Math.max(2, barSpacing - 2.5);
@@ -926,14 +927,14 @@ export class WMPVisualizer {
       const waveMidY = eqAreaY + eqAreaH + 8;
       const waveW = winBottomW * 0.82;
       const waveStartX = carX - waveW * 0.5;
-      const waveStep = data.waveform.length / 45;
+      const waveStep = data.waveform.length / 40;
 
       ctx.save();
       ctx.beginPath();
-      for (let i = 0; i < 45; i++) {
+      for (let i = 0; i < 40; i++) {
         const sampleIdx = Math.floor(i * waveStep);
         const amp = isPlaying ? (data.waveform[sampleIdx] || 0) : 0;
-        const wx = waveStartX + (i / 44) * waveW;
+        const wx = waveStartX + (i / 39) * waveW;
         const wy = waveMidY + amp * 7;
         if (i === 0) ctx.moveTo(wx, wy);
         else ctx.lineTo(wx, wy);
@@ -947,19 +948,20 @@ export class WMPVisualizer {
       ctx.restore();
     }
 
-    // 6. Audio Telemetry Readouts (Bottom of back window)
-    const telemY = winBottomY - 7;
+    // 6. Audio Telemetry Readouts (Bottom of back window - Larger, bold font)
+    const telemY = winBottomY - 8;
     const bassPct = (this.smoothedBass * 100).toFixed(0);
     const midsPct = (this.smoothedMids * 100).toFixed(0);
     const trebPct = (this.smoothedTreble * 100).toFixed(0);
 
-    ctx.font = `600 ${Math.max(6.5, winBottomW * 0.040)}px 'JetBrains Mono', monospace`;
+    const telemFontSize = Math.max(8.5, Math.min(11.5, winBottomW * 0.052));
+    ctx.font = `700 ${telemFontSize}px 'JetBrains Mono', monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#a78bfa';
-    ctx.shadowColor = '#a78bfa';
-    ctx.shadowBlur = 3;
-    ctx.fillText(`BASS ${bassPct}% • MIDS ${midsPct}% • HI ${trebPct}% • ~76 BPM`, carX, telemY);
+    ctx.fillStyle = '#c4b5fd';
+    ctx.shadowColor = '#c4b5fd';
+    ctx.shadowBlur = 4;
+    ctx.fillText(`BASS ${bassPct}% • MIDS ${midsPct}% • HI ${trebPct}%`, carX, telemY);
 
     ctx.restore();
   }
